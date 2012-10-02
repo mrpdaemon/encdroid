@@ -36,10 +36,10 @@ import com.dropbox.client2.session.Session.AccessType;
 
 public class DropboxAccount extends Account {
 	// Dropbox app key
-	private final static String APP_KEY = "<YOUR APP KEY HERE>";
+	private final static String APP_KEY = "i83oo6q30w554a3";
 
 	// Dropbox app secret
-	private final static String APP_SECRET = "<YOUR APP SECRET HERE>";
+	private final static String APP_SECRET = "d8ewdwl5xnxp5fr";
 
 	// Full access to dropbox
 	private final static AccessType ACCESS_TYPE = AccessType.DROPBOX;
