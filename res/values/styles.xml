@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="LightThemeSelector" parent="android:Theme.Light">
+        <item name="menuIconPaste">@drawable/ic_menu_paste</item>
+        <item name="menuIconPrefs">@drawable/ic_menu_preferences</item>
+    </style>
+
+</resources>

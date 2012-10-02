@@ -1,0 +1,6 @@
+<resources>
+  <declare-styleable name="LightThemeSelector">
+    <attr name="menuIconPaste" format="reference" />
+    <attr name="menuIconPrefs" format="reference" />
+  </declare-styleable>
+</resources>

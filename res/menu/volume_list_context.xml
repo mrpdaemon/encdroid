@@ -1,0 +1,13 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item
+        android:id="@+id/volume_list_menu_lock"
+        android:title="@string/menu_lock_volume"/>
+    <item
+        android:id="@+id/volume_list_menu_rename"
+        android:title="@string/menu_rename"/>
+    <item
+        android:id="@+id/volume_list_menu_delete"
+        android:title="@string/menu_delete"/>
+
+</menu>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+	<CheckBoxPreference 
+	    android:key="cache_key"
+	    android:summary="@string/save_pass_sum_str"
+	    android:title="@string/save_pass_title_str" 
+	    android:defaultValue="false"
+	/>
+	<CheckBoxPreference
+	    android:key="auto_import"
+	    android:summary="@string/auto_import_pref_sum_str"
+	    android:title="@string/auto_import_pref_title_str"
+	    android:defaultValue="true"
+	/>
+</PreferenceScreen>

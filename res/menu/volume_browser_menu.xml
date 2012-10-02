@@ -1,0 +1,25 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item
+        android:id="@+id/volume_browser_menu_paste"
+        android:icon="?attr/menuIconPaste"
+        android:showAsAction="ifRoom|withText"
+        android:title="@string/menu_paste"
+        android:visible="false"/>
+    <item
+        android:id="@+id/volume_browser_menu_refresh"
+        android:icon="@drawable/ic_menu_refresh"
+        android:showAsAction="ifRoom|withText"
+        android:title="@string/menu_refresh"/>
+    <item
+        android:id="@+id/volume_browser_menu_mkdir"
+        android:icon="@drawable/ic_menu_newfolder"
+        android:showAsAction="ifRoom|withText"
+        android:title="@string/menu_newfolder"/>
+    <item
+        android:id="@+id/volume_browser_menu_import"
+        android:icon="@drawable/ic_menu_import_file"
+        android:showAsAction="ifRoom|withText"
+        android:title="@string/menu_import_files"/>
+
+</menu>

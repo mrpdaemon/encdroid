@@ -1,0 +1,19 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item
+        android:id="@+id/volume_browser_menu_cut"
+        android:title="@string/menu_cut"/>
+    <item
+        android:id="@+id/volume_browser_menu_copy"
+        android:title="@string/menu_copy"/>
+    <item
+        android:id="@+id/volume_browser_menu_rename"
+        android:title="@string/menu_rename"/>
+    <item
+        android:id="@+id/volume_browser_menu_delete"
+        android:title="@string/menu_delete"/>
+    <item
+        android:id="@+id/volume_browser_menu_export"
+        android:title="@string/menu_export_sd"/>
+
+</menu>
