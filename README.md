@@ -14,10 +14,6 @@ these volumes including ability to write/rename/move files and directories.
 
 The easiest way to install Encdroid is through the
 [Google Play store](https://play.google.com/store/apps/details?id=org.mrpdaemon.android.encdroid).
-Note that due to U.S. export regulations around applications with encryption
-functionality it is only available to download from the U.S. However since it is
-open source software, anyone can download and build it for using it on their own
-phone.
 
 ## Building
 
