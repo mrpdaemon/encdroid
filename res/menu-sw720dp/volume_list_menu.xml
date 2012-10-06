@@ -1,0 +1,24 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item
+        android:id="@+id/volume_list_menu_create"
+        android:icon="@drawable/ic_menu_newvolume"
+        android:showAsAction="ifRoom|withText"
+        android:title="@string/menu_create_vol"/>
+    <item
+        android:id="@+id/volume_list_menu_import"
+        android:icon="@drawable/ic_menu_import_volume"
+        android:showAsAction="ifRoom|withText"
+        android:title="@string/menu_import_vol"/>
+    <item
+        android:id="@+id/volume_list_menu_accounts"
+        android:icon="@drawable/ic_menu_cc"
+        android:showAsAction="ifRoom|withText"
+        android:title="@string/accounts"/>
+    <item
+        android:id="@+id/volume_list_menu_settings"
+        android:icon="?attr/menuIconPrefs"
+        android:showAsAction="ifRoom|withText"
+        android:title="@string/menu_settings"/>
+
+</menu>
