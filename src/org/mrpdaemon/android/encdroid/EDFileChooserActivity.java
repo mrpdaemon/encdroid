@@ -188,7 +188,7 @@ public class EDFileChooserActivity extends ListActivity {
 		MenuInflater inflater = getMenuInflater();
 		inflater.inflate(R.menu.file_chooser_menu, menu);
 
-		// Make the export item visible
+		// Make the export item visible and hide the refresh item
 		if (mMode == EXPORT_FILE_MODE || mMode == CREATE_VOLUME_MODE) {
 			MenuItem item = menu.findItem(R.id.file_chooser_menu_export);
 			item.setVisible(true);
@@ -197,6 +197,9 @@ public class EDFileChooserActivity extends ListActivity {
 			} else {
 				item.setIcon(R.drawable.ic_menu_newvolume);
 			}
+			
+			item = menu.findItem(R.id.file_chooser_menu_refresh);
+			item.setVisible(false);
 		}
 
 		return super.onCreateOptionsMenu(menu);
