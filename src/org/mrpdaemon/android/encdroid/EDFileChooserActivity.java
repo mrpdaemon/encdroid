@@ -177,6 +177,7 @@ public class EDFileChooserActivity extends ListActivity {
 
 		mListHeader = new TextView(this);
 		mListHeader.setTypeface(null, Typeface.BOLD);
+		mListHeader.setTextSize(16);
 		this.getListView().addHeaderView(mListHeader);
 
 		mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
