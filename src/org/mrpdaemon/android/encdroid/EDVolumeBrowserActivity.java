@@ -1194,17 +1194,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 			if (!isCancelled()) {
 				if (result == true) {
 					// Delete the file
-					if (mFileObserver.wasModified()) {
-						Log.d(TAG, "Deleting '" + srcFile.getAbsolutePath()
-								+ "' : file was sync'd.");
-					} else {
-						Log.d(TAG, "Deleting '" + srcFile.getAbsolutePath()
-								+ "' : file not modified.");
-					}
 					srcFile.delete();
-
-					// Clean up reference to the file observer
-					mFileObserver = null;
 
 					// Show toast
 					Toast.makeText(
@@ -1592,6 +1582,10 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				// File not modified, delete from SD
 				dstFile.delete();
 			}
+
+			// Clean up reference to the file observer
+			mFileObserver = null;
+
 			break;
 		case PICK_FILE_REQUEST:
 			if (resultCode == Activity.RESULT_OK) {
