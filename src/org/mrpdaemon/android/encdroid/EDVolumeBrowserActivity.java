@@ -54,6 +54,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.FileObserver;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
@@ -1095,8 +1096,20 @@ public class EDVolumeBrowserActivity extends ListActivity {
 					mFileObserver.startWatching();
 
 					// Figure out the MIME type
+					String fileName = dstFile.getName();
 					String extension = MimeTypeMap
-							.getFileExtensionFromUrl(dstFile.getName());
+							.getFileExtensionFromUrl(fileName);
+					if (TextUtils.isEmpty(extension)) {
+						/*
+						 * getFileExtensionFromUrl doesn't work for files with
+						 * spaces
+						 */
+						int dotIndex = fileName.lastIndexOf('.');
+						if (dotIndex >= 0) {
+							extension = fileName.substring(dotIndex + 1);
+						}
+					}
+
 					String mimeType = MimeTypeMap.getSingleton()
 							.getMimeTypeFromExtension(extension);
 
