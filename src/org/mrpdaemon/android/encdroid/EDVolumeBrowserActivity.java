@@ -178,55 +178,71 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	 */
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-
-		setContentView(R.layout.file_chooser);
 
 		Bundle params = getIntent().getExtras();
 
 		mApp = (EDApplication) getApplication();
 
-		mCurFileList = new ArrayList<EDFileChooserItem>();
-
-		// Start monitoring external storage state
-		mExternalStorageReceiver = new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				updateExternalStorageState();
-			}
-		};
-		IntentFilter filter = new IntentFilter();
-		filter.addAction(Intent.ACTION_MEDIA_MOUNTED);
-		filter.addAction(Intent.ACTION_MEDIA_REMOVED);
-		registerReceiver(mExternalStorageReceiver, filter);
-		updateExternalStorageState();
-
-		if (mExternalStorageAvailable == false) {
-			Log.e(TAG, "No SD card is available");
-			mErrDialogText = getString(R.string.error_no_sd_card);
-			showDialog(DIALOG_ERROR);
-			finish();
-		}
-
 		int position = params.getInt(VOL_ID_KEY);
 		mEDVolume = mApp.getVolumeList().get(position);
 		mVolume = mEDVolume.getVolume();
 		mDirStack = new Stack<EncFSFile>();
-		mCurEncFSDir = mVolume.getRootDir();
 
-		launchFillTask();
+		if (mVolume != null) {
+			mCurEncFSDir = mVolume.getRootDir();
 
-		registerForContextMenu(this.getListView());
+			mCurFileList = new ArrayList<EDFileChooserItem>();
 
-		if (mApp.isActionBarAvailable()) {
-			mActionBar = new EDActionBar(this);
-			mActionBar.setDisplayHomeAsUpEnabled(true);
+			// Start monitoring external storage state
+			mExternalStorageReceiver = new BroadcastReceiver() {
+				@Override
+				public void onReceive(Context context, Intent intent) {
+					updateExternalStorageState();
+				}
+			};
+			IntentFilter filter = new IntentFilter();
+			filter.addAction(Intent.ACTION_MEDIA_MOUNTED);
+			filter.addAction(Intent.ACTION_MEDIA_REMOVED);
+			registerReceiver(mExternalStorageReceiver, filter);
+			updateExternalStorageState();
+
+			if (mExternalStorageAvailable == false) {
+				Log.e(TAG, "No SD card is available");
+				mErrDialogText = getString(R.string.error_no_sd_card);
+				showDialog(DIALOG_ERROR);
+				finish();
+			}
+
+			// Restore UI elements
+			super.onCreate(savedInstanceState);
+
+			setContentView(R.layout.file_chooser);
+
+			launchFillTask();
+
+			registerForContextMenu(this.getListView());
+
+			if (mApp.isActionBarAvailable()) {
+				mActionBar = new EDActionBar(this);
+				mActionBar.setDisplayHomeAsUpEnabled(true);
+			}
+
+			mListHeader = new TextView(this);
+			mListHeader.setTypeface(null, Typeface.BOLD);
+			mListHeader.setTextSize(16);
+			this.getListView().addHeaderView(mListHeader);
+		} else {
+			/*
+			 * Activity is being recreated after task was killed, just exit back
+			 * to the volume list.
+			 */
+			super.onCreate(savedInstanceState);
+
+			Intent intent = new Intent(this, EDVolumeListActivity.class);
+			intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+			startActivity(intent);
+			finish();
 		}
-
-		mListHeader = new TextView(this);
-		mListHeader.setTypeface(null, Typeface.BOLD);
-		mListHeader.setTextSize(16);
-		this.getListView().addHeaderView(mListHeader);
 	}
 
 	// Update the external storage state
@@ -246,7 +262,9 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		unregisterReceiver(mExternalStorageReceiver);
+		if (mExternalStorageAvailable) {
+			unregisterReceiver(mExternalStorageReceiver);
+		}
 	}
 
 	// Create the options menu
