@@ -539,8 +539,10 @@ public class EDFileChooserActivity extends ListActivity {
 		switch (item.getItemId()) {
 		case R.id.file_chooser_menu_select:
 		case R.id.file_picker_menu_import:
-			EDFileChooserItem selected = mAdapter.getItem((int) info.id);
-			returnResult(selected.getPath());
+			if (info.id >= 0) {
+				EDFileChooserItem selected = mAdapter.getItem((int) info.id);
+				returnResult(selected.getPath());
+			}
 			return true;
 		default:
 			return super.onContextItemSelected(item);
