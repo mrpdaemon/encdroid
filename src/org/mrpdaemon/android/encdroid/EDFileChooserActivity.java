@@ -18,6 +18,7 @@
 
 package org.mrpdaemon.android.encdroid;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -71,7 +72,8 @@ public class EDFileChooserActivity extends ListActivity {
 
 	// Valid FS types
 	public final static int LOCAL_FS = 0;
-	public final static int DROPBOX_FS = 1;
+	public final static int EXT_SD_FS = 1;
+	public final static int DROPBOX_FS = 2;
 
 	// Result key for the path returned by this activity
 	public final static String RESULT_KEY = "result_path";
@@ -142,11 +144,17 @@ public class EDFileChooserActivity extends ListActivity {
 
 		mCurrentDir = "/";
 
+		mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+
 		// Instantiate the proper file provider
 		switch (mFsType) {
 		case LOCAL_FS:
 			mFileProvider = new EncFSLocalFileProvider(
 					Environment.getExternalStorageDirectory());
+			break;
+		case EXT_SD_FS:
+			mFileProvider = new EncFSLocalFileProvider(new File(
+					mPrefs.getString("ext_sd_location", "/mnt/external1")));
 			break;
 		case DROPBOX_FS:
 			EDDropbox dropbox = ((EDApplication) getApplication()).getDropbox();
@@ -179,8 +187,6 @@ public class EDFileChooserActivity extends ListActivity {
 		mListHeader.setTypeface(null, Typeface.BOLD);
 		mListHeader.setTextSize(16);
 		this.getListView().addHeaderView(mListHeader);
-
-		mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 	}
 
 	// Create the options menu
@@ -198,7 +204,7 @@ public class EDFileChooserActivity extends ListActivity {
 			} else {
 				item.setIcon(R.drawable.ic_menu_newvolume);
 			}
-			
+
 			item = menu.findItem(R.id.file_chooser_menu_refresh);
 			item.setVisible(false);
 		}
@@ -347,6 +353,9 @@ public class EDFileChooserActivity extends ListActivity {
 					if (mFsType == DROPBOX_FS) {
 						setTitle(getString(R.string.menu_import_vol) + " ("
 								+ getString(R.string.dropbox) + ")");
+					} else if (mFsType == EXT_SD_FS) {
+						setTitle(getString(R.string.menu_import_vol) + " ("
+								+ getString(R.string.fs_dialog_ext_sd) + ")");
 					} else {
 						setTitle(getString(R.string.menu_import_vol) + " ("
 								+ getString(R.string.fs_dialog_local) + ")");
@@ -363,6 +372,9 @@ public class EDFileChooserActivity extends ListActivity {
 					if (mFsType == DROPBOX_FS) {
 						setTitle(getString(R.string.menu_create_vol) + " ("
 								+ getString(R.string.dropbox) + ")");
+					} else if (mFsType == EXT_SD_FS) {
+						setTitle(getString(R.string.menu_create_vol) + " ("
+								+ getString(R.string.fs_dialog_ext_sd) + ")");
 					} else {
 						setTitle(getString(R.string.menu_create_vol) + " ("
 								+ getString(R.string.fs_dialog_local) + ")");

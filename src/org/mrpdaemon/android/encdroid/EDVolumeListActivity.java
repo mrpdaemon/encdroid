@@ -71,8 +71,10 @@ public class EDVolumeListActivity extends ListActivity {
 	// Request into EDFileChooserActivity to run in different modes
 	private final static int LOCAL_VOLUME_PICKER_REQUEST = 0;
 	private final static int LOCAL_VOLUME_CREATE_REQUEST = 1;
-	private final static int DROPBOX_VOLUME_PICKER_REQUEST = 2;
-	private final static int DROPBOX_VOLUME_CREATE_REQUEST = 3;
+	private final static int EXT_SD_VOLUME_PICKER_REQUEST = 2;
+	private final static int EXT_SD_VOLUME_CREATE_REQUEST = 3;
+	private final static int DROPBOX_VOLUME_PICKER_REQUEST = 4;
+	private final static int DROPBOX_VOLUME_CREATE_REQUEST = 5;
 
 	// Dialog ID's
 	private final static int DIALOG_VOL_PASS = 0;
@@ -166,6 +168,8 @@ public class EDVolumeListActivity extends ListActivity {
 		case EDFileChooserActivity.VOLUME_PICKER_MODE:
 			if (fsType == EDFileChooserActivity.LOCAL_FS) {
 				request = LOCAL_VOLUME_PICKER_REQUEST;
+			} else if (fsType == EDFileChooserActivity.EXT_SD_FS) {
+				request = EXT_SD_VOLUME_PICKER_REQUEST;
 			} else if (fsType == EDFileChooserActivity.DROPBOX_FS) {
 				request = DROPBOX_VOLUME_PICKER_REQUEST;
 			}
@@ -173,6 +177,8 @@ public class EDVolumeListActivity extends ListActivity {
 		case EDFileChooserActivity.CREATE_VOLUME_MODE:
 			if (fsType == EDFileChooserActivity.LOCAL_FS) {
 				request = LOCAL_VOLUME_CREATE_REQUEST;
+			} else if (fsType == EDFileChooserActivity.EXT_SD_FS) {
+				request = EXT_SD_VOLUME_CREATE_REQUEST;
 			} else if (fsType == EDFileChooserActivity.DROPBOX_FS) {
 				request = DROPBOX_VOLUME_CREATE_REQUEST;
 			}
@@ -549,8 +555,18 @@ public class EDVolumeListActivity extends ListActivity {
 			});
 			break;
 		case DIALOG_FS_TYPE:
-			final CharSequence[] fsTypes = {
-					getString(R.string.fs_dialog_local), "Dropbox" };
+			boolean extSd = mPrefs.getBoolean("ext_sd_enabled", false);
+			CharSequence[] fsTypes;
+			if (extSd == true) {
+				fsTypes = new CharSequence[3];
+				fsTypes[0] = getString(R.string.fs_dialog_local);
+				fsTypes[1] = "Dropbox";
+				fsTypes[2] = getString(R.string.fs_dialog_ext_sd);
+			} else {
+				fsTypes = new CharSequence[2];
+				fsTypes[0] = getString(R.string.fs_dialog_local);
+				fsTypes[1] = "Dropbox";
+			}
 			alertBuilder.setTitle(getString(R.string.fs_type_dialog_title_str));
 			alertBuilder.setItems(fsTypes,
 					new DialogInterface.OnClickListener() {
@@ -586,6 +602,18 @@ public class EDVolumeListActivity extends ListActivity {
 											EDFileChooserActivity.CREATE_VOLUME_MODE,
 											EDFileChooserActivity.DROPBOX_FS);
 								}
+								break;
+							case 2:
+								if (mVolumeOp == VOLUME_OP_IMPORT) {
+									launchFileChooser(
+											EDFileChooserActivity.VOLUME_PICKER_MODE,
+											EDFileChooserActivity.EXT_SD_FS);
+								} else {
+									launchFileChooser(
+											EDFileChooserActivity.CREATE_VOLUME_MODE,
+											EDFileChooserActivity.EXT_SD_FS);
+								}
+								break;
 							}
 						}
 					});
@@ -761,12 +789,20 @@ public class EDVolumeListActivity extends ListActivity {
 				mVolumeType = EDVolume.LOCAL_VOLUME;
 				showDialog(DIALOG_VOL_NAME);
 				break;
+			case EXT_SD_VOLUME_PICKER_REQUEST:
+				mVolumeType = EDVolume.EXT_SD_VOLUME;
+				showDialog(DIALOG_VOL_NAME);
+				break;
 			case DROPBOX_VOLUME_PICKER_REQUEST:
 				mVolumeType = EDVolume.DROPBOX_VOLUME;
 				showDialog(DIALOG_VOL_NAME);
 				break;
 			case LOCAL_VOLUME_CREATE_REQUEST:
 				mVolumeType = EDVolume.LOCAL_VOLUME;
+				showDialog(DIALOG_VOL_CREATE);
+				break;
+			case EXT_SD_VOLUME_CREATE_REQUEST:
+				mVolumeType = EDVolume.EXT_SD_VOLUME;
 				showDialog(DIALOG_VOL_CREATE);
 				break;
 			case DROPBOX_VOLUME_CREATE_REQUEST:
@@ -820,6 +856,9 @@ public class EDVolumeListActivity extends ListActivity {
 		case EDVolume.DROPBOX_VOLUME:
 			return new EDDropboxFileProvider(mApp.getDropbox().getApi(),
 					relPath);
+		case EDVolume.EXT_SD_VOLUME:
+			return new EncFSLocalFileProvider(new File(mPrefs.getString(
+					"ext_sd_location", "/mnt/external1"), relPath));
 		default:
 			Log.e(TAG, "Unknown volume type");
 			return null;

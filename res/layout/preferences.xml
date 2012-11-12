@@ -1,16 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
 
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-	<CheckBoxPreference 
-	    android:key="cache_key"
-	    android:summary="@string/save_pass_sum_str"
-	    android:title="@string/save_pass_title_str" 
-	    android:defaultValue="false"
-	/>
-	<CheckBoxPreference
-	    android:key="auto_import"
-	    android:summary="@string/auto_import_pref_sum_str"
-	    android:title="@string/auto_import_pref_title_str"
-	    android:defaultValue="true"
-	/>
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="cache_key"
+        android:summary="@string/save_pass_sum_str"
+        android:title="@string/save_pass_title_str" />
+
+    <CheckBoxPreference
+        android:defaultValue="true"
+        android:key="auto_import"
+        android:summary="@string/auto_import_pref_sum_str"
+        android:title="@string/auto_import_pref_title_str" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="ext_sd_enabled"
+        android:summary="@string/ext_sd_enabled_pref_sum_str"
+        android:title="@string/ext_sd_enabled_pref_title_str" />
+
+    <PreferenceScreen
+        android:key="ext_sd_prefs"
+        android:title="@string/ext_sd_prefs_title_str" >
+
+        <EditTextPreference
+            android:defaultValue="/mnt/external1"
+            android:key="ext_sd_location"
+            android:summary="@string/ext_sd_location_pref_sum_str"
+            android:title="@string/ext_sd_location_pref_title_str" />
+    </PreferenceScreen>
+
 </PreferenceScreen>

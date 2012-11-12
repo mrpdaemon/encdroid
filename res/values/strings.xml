@@ -66,6 +66,7 @@
     <string name="menu_import">Import</string>
     <string name="fs_type_dialog_title_str">Choose volume location</string>
     <string name="fs_dialog_local">Local</string>
+    <string name="fs_dialog_ext_sd">External SD</string>
     <string name="menu_refresh">Refresh</string>
     <string name="dropbox_login_error">Failed to login to Dropbox account</string>
     <string name="accounts">Accounts</string>
@@ -88,5 +89,11 @@
     <string name="auto_import_vol_dialog_str">Import volume at \'%s\' ?</string>
     <string name="auto_import_pref_title_str">Auto import volumes</string>
     <string name="auto_import_pref_sum_str">Ask to import volumes when an EncFS configuration file is found</string>
+    <string name="ext_sd_enabled_pref_title_str">Enable external SD card</string>
+    <string name="ext_sd_enabled_pref_sum_str">Allow storing volumes on the external SD card</string>
+    <string name="ext_sd_prefs_title_str">External SD card preferences</string>
+    <string name="ext_sd_location_pref_title_str">External SD location</string>
+    <string name="ext_sd_location_pref_sum_str">Filesystem path of the external SD card</string>
+    <string name="ext_sd_vol_prefix_str">External SD</string>
 
 </resources>

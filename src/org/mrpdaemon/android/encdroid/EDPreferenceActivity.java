@@ -22,7 +22,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
+import android.preference.Preference;
 import android.preference.PreferenceActivity;
+import android.preference.PreferenceManager;
+import android.preference.PreferenceScreen;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MenuItem;
@@ -53,6 +56,10 @@ public class EDPreferenceActivity extends PreferenceActivity implements
 		}
 
 		setTitle(getString(R.string.settings));
+
+		SharedPreferences prefs = PreferenceManager
+				.getDefaultSharedPreferences(this);
+		adjustExtSdScreen(prefs);
 	}
 
 	/*
@@ -109,6 +116,17 @@ public class EDPreferenceActivity extends PreferenceActivity implements
 				.unregisterOnSharedPreferenceChangeListener(this);
 	}
 
+	private void adjustExtSdScreen(SharedPreferences prefs) {
+		Preference extSdPrefScreen = findPreference("ext_sd_prefs");
+		if (prefs.getBoolean("ext_sd_enabled", false)) {
+			Log.d(TAG, "External SD card enabled");
+			extSdPrefScreen.setEnabled(true);
+		} else {
+			Log.d(TAG, "External SD card disabled");
+			extSdPrefScreen.setEnabled(false);
+		}
+	}
+
 	@Override
 	public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
 		if (key.equals("cache_key")) {
@@ -119,6 +137,8 @@ public class EDPreferenceActivity extends PreferenceActivity implements
 			} else {
 				Log.d(TAG, "Key caching enabled.");
 			}
+		} else if (key.equals("ext_sd_enabled")) {
+			adjustExtSdScreen(prefs);
 		}
 	}
 }

@@ -21,7 +21,10 @@ package org.mrpdaemon.android.encdroid;
 import java.util.List;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,12 +38,16 @@ public class EDVolumeListAdapter extends ArrayAdapter<EDVolume> {
 	private int resourceId;
 	List<EDVolume> items;
 
+	// Shared preferences
+	private SharedPreferences mPrefs = null;
+
 	public EDVolumeListAdapter(Context context, int resourceId,
 			List<EDVolume> items) {
 		super(context, resourceId, items);
 		this.context = context;
 		this.resourceId = resourceId;
 		this.items = items;
+		this.mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 	}
 
 	public EDVolume getItem(int i) {
@@ -68,6 +75,11 @@ public class EDVolumeListAdapter extends ArrayAdapter<EDVolume> {
 
 			if (volumeName != null) {
 				volumeName.setText(item.getName());
+				if (!isEnabled(position)) {
+					volumeName.setTextColor(Color.LTGRAY);
+				} else {
+					volumeName.setTextColor(Color.BLACK);
+				}
 			}
 
 			if (volumePath != null) {
@@ -80,9 +92,19 @@ public class EDVolumeListAdapter extends ArrayAdapter<EDVolume> {
 				case EDVolume.DROPBOX_VOLUME:
 					volumePath.setText("[Dropbox]:" + item.getPath());
 					break;
+				case EDVolume.EXT_SD_VOLUME:
+					volumePath.setText("["
+							+ context.getString(R.string.ext_sd_vol_prefix_str)
+							+ "]:" + item.getPath());
+					break;
 				default:
 					volumePath.setText(item.getPath());
 					break;
+				}
+				if (!isEnabled(position)) {
+					volumePath.setTextColor(Color.LTGRAY);
+				} else {
+					volumePath.setTextColor(Color.BLACK);
 				}
 			}
 
@@ -92,9 +114,27 @@ public class EDVolumeListAdapter extends ArrayAdapter<EDVolume> {
 				} else {
 					volumeIcon.setImageResource(R.drawable.ic_unlocked_volume);
 				}
+
+				if (!isEnabled(position)) {
+					volumeIcon.setColorFilter(Color.LTGRAY);
+				} else {
+					volumeIcon.clearColorFilter();
+				}
 			}
 		}
 
 		return row;
 	}
+
+	@Override
+	public boolean isEnabled(int position) {
+		final EDVolume item = items.get(position);
+
+		if (item.getType() == EDVolume.EXT_SD_VOLUME) {
+			return mPrefs.getBoolean("ext_sd_enabled", false);
+		}
+
+		return true;
+	}
+
 }

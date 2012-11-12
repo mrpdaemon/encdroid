@@ -25,6 +25,7 @@ public class EDVolume {
 	// Volume types
 	public final static int LOCAL_VOLUME = 0;
 	public final static int DROPBOX_VOLUME = 1;
+	public final static int EXT_SD_VOLUME = 2;
 
 	// Volume name
 	private String name;
