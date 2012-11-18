@@ -1,8 +1,11 @@
 .classpath
 .project
+.cproject
+.settings
 bin
 gen
 graphics
 libs/*
+obj
 proguard.cfg
 project.properties
