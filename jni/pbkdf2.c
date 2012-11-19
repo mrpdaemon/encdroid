@@ -1,41 +1,54 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+/*
+ * encdroid - EncFS client application for Android
+ * Copyright (C) 2012  Mark R. Pariente
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <jni.h>
 
 #include <openssl/evp.h>
 
-#define KEY_LEN      32
-#define KEK_KEY_LEN  24
-#define ITERATION    1161684 
+jbyteArray
+Java_org_mrpdaemon_android_encdroid_EDNativePBKDF2Provider_pbkdf2(JNIEnv *env,
+		                                                          jobject jobj,
+		                                                          jint pwd_len,
+		                                                          jstring password,
+		                                                          jint salt_len,
+		                                                          jbyteArray salt_data,
+		                                                          jint iterations,
+		                                                          jint key_len) {
+	jbyteArray ret;
 
-int main() {
-	size_t i;
-	unsigned char *out;
-	const char pwd[] = "test";
-	unsigned char salt_value[] = { 0, 0, 0, 0, 0, 0, 5, 0, 0, 3, 0, 0, 0, 0, 0,
-			7, 0, 0, 0, 0 };
+	// Grab pointers to the actual data for the array input parameters
+	const char *in_password = (*env)->GetStringUTFChars(env, password, 0);
+	const jbyte *in_salt_data = (*env)->GetByteArrayElements(env, salt_data, 0);
 
-	out = (unsigned char *) malloc(sizeof(unsigned char) * KEK_KEY_LEN);
+	// Allocate and prepare the output parameter
+	ret = (*env)->NewByteArray(env, key_len);
+	jbyte *out_bytes = (*env)->GetByteArrayElements(env, ret, 0);
 
-	printf("pass: %s\n", pwd);
-	printf("ITERATION: %u\n", ITERATION);
-	printf("salt: ");
-	for (i = 0; i < sizeof(salt_value); i++) {
-		printf("%02x", salt_value[i]);
-	}
-	printf("\n");
+	if (PKCS5_PBKDF2_HMAC_SHA1(in_password, pwd_len, in_salt_data, salt_len,
+			                   iterations, key_len, out_bytes) != 0) {
+		(*env)->ReleaseStringUTFChars(env, password, in_password);
+		(*env)->ReleaseByteArrayElements(env, ret, out_bytes, 0);
 
-	if (PKCS5_PBKDF2_HMAC_SHA1(pwd, strlen(pwd), salt_value, sizeof(salt_value),
-			ITERATION, KEK_KEY_LEN, out) != 0) {
-		printf("out: ");
-		for (i = 0; i < KEK_KEY_LEN; i++) {
-			printf("%02x", out[i]);
-		}
-		printf("\n");
-	} else {
-		//fprintf(stderr, "PKCS5_PBKDF2_HMAC_SHA1 failed\n");
+		return ret;
 	}
 
-	free(out);
-	return 0;
+	(*env)->ReleaseStringUTFChars(env, password, in_password);
+	(*env)->ReleaseByteArrayElements(env, ret, out_bytes, JNI_ABORT);
+
+	return NULL;
 }
