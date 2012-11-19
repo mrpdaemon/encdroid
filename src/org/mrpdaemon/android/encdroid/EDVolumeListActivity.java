@@ -27,6 +27,7 @@ import org.mrpdaemon.sec.encfs.EncFSInvalidPasswordException;
 import org.mrpdaemon.sec.encfs.EncFSLocalFileProvider;
 import org.mrpdaemon.sec.encfs.EncFSVolume;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -888,6 +889,7 @@ public class EDVolumeListActivity extends ListActivity {
 			this.cachedKey = cachedKey;
 		}
 
+		@SuppressLint("Wakelock")
 		@Override
 		protected EncFSVolume doInBackground(String... args) {
 
@@ -909,7 +911,8 @@ public class EDVolumeListActivity extends ListActivity {
 			// Unlock the volume, takes long due to PBKDF2 calculation
 			try {
 				if (cachedKey == null) {
-					volume = new EncFSVolume(fileProvider, args[1]);
+					volume = new EncFSVolume(fileProvider, args[1],
+							mApp.getNativePBKDF2Provider());
 				} else {
 					volume = new EncFSVolume(fileProvider, cachedKey);
 				}
@@ -1044,7 +1047,7 @@ public class EDVolumeListActivity extends ListActivity {
 			// Create the volume
 			try {
 				EncFSVolume.createVolume(volumeProvider, new EncFSConfig(),
-						password);
+						password, mApp.getNativePBKDF2Provider());
 			} catch (Exception e) {
 				mErrDialogText = e.getMessage();
 				return false;

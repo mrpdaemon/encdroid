@@ -40,6 +40,12 @@ public class EDApplication extends Application {
 	// Whether action bar is available
 	private static boolean mActionBarAvailable;
 
+	// PBKDF2 provider
+	private EDNativePBKDF2Provider mNativePBKDF2Provider;
+
+	// Whether native PBKDF2 provider is available
+	private static boolean mNativePBKDF2ProviderAvailable;
+
 	static {
 		try {
 			EDActionBar.checkAvailable();
@@ -47,7 +53,16 @@ public class EDApplication extends Application {
 			Log.d(TAG, "Action bar class is available");
 		} catch (Throwable t) {
 			mActionBarAvailable = false;
-			Log.d(TAG, "Action bar class is unavailable");
+			Log.d(TAG, "Action bar class is NOT unavailable");
+		}
+
+		try {
+			EDNativePBKDF2Provider.checkAvailable();
+			mNativePBKDF2ProviderAvailable = true;
+			Log.d(TAG, "Native PBKDF2 provider is available");
+		} catch (Throwable t) {
+			mNativePBKDF2ProviderAvailable = false;
+			Log.d(TAG, "Native PBKDF2 provider is NOT available");
 		}
 	}
 
@@ -63,6 +78,12 @@ public class EDApplication extends Application {
 		this.dbHelper = new EDDBHelper(this);
 		this.volumeList = dbHelper.getVolumes();
 		this.mDropbox = new EDDropbox(this);
+
+		if (mNativePBKDF2ProviderAvailable) {
+			mNativePBKDF2Provider = new EDNativePBKDF2Provider();
+		} else {
+			mNativePBKDF2Provider = null;
+		}
 
 		Log.d(TAG, "EDApplication initialized");
 	}
@@ -93,5 +114,19 @@ public class EDApplication extends Application {
 	 */
 	public EDDropbox getDropbox() {
 		return mDropbox;
+	}
+
+	/**
+	 * @return whether native PBKDF2 provider is available
+	 */
+	public boolean isNativePBKDF2ProviderAvailable() {
+		return mNativePBKDF2ProviderAvailable;
+	}
+
+	/**
+	 * @return the native PBKDF2 provider
+	 */
+	public EDNativePBKDF2Provider getNativePBKDF2Provider() {
+		return mNativePBKDF2Provider;
 	}
 }
