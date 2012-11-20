@@ -21,6 +21,8 @@ The recommended way of building Encdroid is using Eclipse and the Android
 Developer Tools (ADT) plugin. Once installed simply "Import Existing Android
 Code into Workspace" against the cloned repository.
 
+### Android NDK
+
 Since version 1.3 Encdroid also includes native code for improving PBKDF2
 performance. The jni/ directory contains prebuilt versions of the openssl
 libcrypto shared library for armeabi, armeabi-v7a, mips and x86. A small JNI
