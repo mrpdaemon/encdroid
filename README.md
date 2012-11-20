@@ -21,6 +21,18 @@ The recommended way of building Encdroid is using Eclipse and the Android
 Developer Tools (ADT) plugin. Once installed simply "Import Existing Android
 Code into Workspace" against the cloned repository.
 
+Since version 1.3 Encdroid also includes native code for improving PBKDF2
+performance. The jni/ directory contains prebuilt versions of the openssl
+libcrypto shared library for armeabi, armeabi-v7a, mips and x86. A small JNI
+glue library in jni/pbkdf2.c provides PBKDF2 functionality using openssl. In
+order to properly build the native components of the project please refer to the
+[Android NDK documentation](http://developer.android.com/tools/sdk/ndk/index.html).
+Once you have the NDK installed running the following on the toplevel project
+directory should result in proper building and copying of the libraries to the
+libs/ folder:
+
+    ${NDK_ROOT}/ndk-build "APP_ABI := armeabi armeabi-v7a mips x86"
+
 ### Required Libraries
 
 Encdroid depends on the following libraries which must be placed in the libs/
@@ -31,6 +43,11 @@ directory before building:
 * dropbox-android-sdk-1.5.1
 * httpmime-4.0.3
 * json_simple-1.1
+
+Note that [openssl-android](https://github.com/guardianproject/openssl-android)
+is also a requirement, however this repository contains prebuilt versions of the
+library under jni/ so the project can be built without compiling openssl-android
+from scratch.
 
 ### Target API Level
 
