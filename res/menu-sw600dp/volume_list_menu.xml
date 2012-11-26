@@ -13,10 +13,12 @@
     <item
         android:id="@+id/volume_list_menu_accounts"
         android:icon="@drawable/ic_menu_cc"
+        android:showAsAction="ifRoom|withText"
         android:title="@string/accounts"/>
     <item
         android:id="@+id/volume_list_menu_settings"
         android:icon="?attr/menuIconPrefs"
+        android:showAsAction="ifRoom|withText"
         android:title="@string/menu_settings"/>
 
 </menu>

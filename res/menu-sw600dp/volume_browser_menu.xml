@@ -19,6 +19,7 @@
     <item
         android:id="@+id/volume_browser_menu_mkdir"
         android:icon="@drawable/ic_menu_newfolder"
+        android:showAsAction="ifRoom|withText"
         android:title="@string/menu_newfolder"/>
 
 </menu>

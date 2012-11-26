@@ -35,7 +35,6 @@ import android.app.ListActivity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.DialogInterface.OnCancelListener;
 import android.content.DialogInterface.OnShowListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -91,6 +90,21 @@ public class EDVolumeListActivity extends ListActivity {
 	private final static int VOLUME_OP_IMPORT = 0;
 	private final static int VOLUME_OP_CREATE = 1;
 
+	// Async task types
+	private final static int ASYNC_TASK_UNLOCK_CACHE = 0;
+	private final static int ASYNC_TASK_UNLOCK_PBKDF2 = 1;
+	private final static int ASYNC_TASK_CREATE = 2;
+	private final static int ASYNC_TASK_DELETE = 3;
+
+	// Saved instance state keys
+	private final static String SAVED_VOL_IDX_KEY = "vol_idx";
+	private final static String SAVED_VOL_PICK_RESULT_KEY = "vol_pick_result";
+	private final static String SAVED_CREATE_VOL_NAME_KEY = "create_vol_name";
+	private final static String SAVED_VOL_OP_KEY = "vol_op";
+	private final static String SAVED_VOL_TYPE_KEY = "vol_type";
+	private final static String SAVED_ASYNC_TASK_ID_KEY = "async_task_id";
+	private final static String SAVED_PROGRESS_BAR_STR_ARG_KEY = "prog_bar_str";
+
 	// Logger tag
 	private final static String TAG = "EDVolumeListActivity";
 
@@ -108,7 +122,10 @@ public class EDVolumeListActivity extends ListActivity {
 	private int mSelectedVolIdx;
 
 	// Async task object for running volume key derivation
-	private AsyncTask<String, ?, ?> mAsyncTask = null;
+	private EDAsyncTask<String, ?, ?> mAsyncTask = null;
+
+	// Async task ID
+	private int mAsyncTaskId = -1;
 
 	// Progress dialog for async progress
 	private ProgressDialog mProgDialog = null;
@@ -131,6 +148,15 @@ public class EDVolumeListActivity extends ListActivity {
 	// Shared preferences
 	private SharedPreferences mPrefs = null;
 
+	// Saved instance state for progress bar string argument
+	private String mSavedProgBarStrArg = null;
+
+	// Restore context
+	private class ActivityRestoreContext {
+		public EDVolume savedVolume;
+		public EDAsyncTask<String, ?, ?> savedTask;
+	}
+
 	// Called when the activity is first created.
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -143,7 +169,68 @@ public class EDVolumeListActivity extends ListActivity {
 
 		mApp = (EDApplication) getApplication();
 		mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+		if (savedInstanceState != null) {
+			// Activity being recreated
+			ActivityRestoreContext restoreContext = (ActivityRestoreContext) getLastNonConfigurationInstance();
+			if (restoreContext != null) {
+				mSelectedVolume = restoreContext.savedVolume;
+				mSelectedVolIdx = savedInstanceState.getInt(SAVED_VOL_IDX_KEY);
+				mVolPickerResult = savedInstanceState
+						.getString(SAVED_VOL_PICK_RESULT_KEY);
+				mCreateVolumeName = savedInstanceState
+						.getString(SAVED_CREATE_VOL_NAME_KEY);
+				mVolumeOp = savedInstanceState.getInt(SAVED_VOL_OP_KEY);
+				mVolumeType = savedInstanceState.getInt(SAVED_VOL_TYPE_KEY);
+
+				// Restore async task
+				mAsyncTask = restoreContext.savedTask;
+				mAsyncTaskId = savedInstanceState
+						.getInt(SAVED_ASYNC_TASK_ID_KEY);
+
+				if (mAsyncTask != null) {
+					// Create new progress dialog and replace the old one
+					createProgressBarForTask(mAsyncTaskId,
+							savedInstanceState
+									.getString(SAVED_PROGRESS_BAR_STR_ARG_KEY));
+					mAsyncTask.setProgressDialog(mProgDialog);
+
+					// Fix the activity for the task
+					mAsyncTask.setActivity(this);
+				}
+			}
+		}
 		refreshList();
+	}
+
+	@Override
+	public Object onRetainNonConfigurationInstance() {
+		ActivityRestoreContext restoreContext = new ActivityRestoreContext();
+		restoreContext.savedVolume = mSelectedVolume;
+		if (mAsyncTask != null
+				&& mAsyncTask.getStatus() == AsyncTask.Status.RUNNING) {
+			// Clear progress bar so we don't leak it
+			mProgDialog.dismiss();
+			mAsyncTask.setProgressDialog(null);
+			// Clear the activity so we don't leak it
+			mAsyncTask.setActivity(null);
+			restoreContext.savedTask = mAsyncTask;
+		} else {
+			restoreContext.savedTask = null;
+		}
+		return restoreContext;
+	}
+
+	@Override
+	protected void onSaveInstanceState(Bundle outState) {
+		outState.putInt(SAVED_VOL_IDX_KEY, mSelectedVolIdx);
+		outState.putString(SAVED_VOL_PICK_RESULT_KEY, mVolPickerResult);
+		outState.putString(SAVED_CREATE_VOL_NAME_KEY, mCreateVolumeName);
+		outState.putInt(SAVED_VOL_OP_KEY, mVolumeOp);
+		outState.putInt(SAVED_VOL_TYPE_KEY, mVolumeType);
+		outState.putInt(SAVED_ASYNC_TASK_ID_KEY, mAsyncTaskId);
+		outState.putString(SAVED_PROGRESS_BAR_STR_ARG_KEY, mSavedProgBarStrArg);
+		super.onSaveInstanceState(outState);
 	}
 
 	// Create the options menu
@@ -152,57 +239,6 @@ public class EDVolumeListActivity extends ListActivity {
 		MenuInflater inflater = getMenuInflater();
 		inflater.inflate(R.menu.volume_list_menu, menu);
 		return super.onCreateOptionsMenu(menu);
-	}
-
-	// Launch the file chooser activity in the requested mode
-	private void launchFileChooser(int mode, int fsType) {
-		Intent startFileChooser = new Intent(this, EDFileChooserActivity.class);
-
-		Bundle fileChooserParams = new Bundle();
-		fileChooserParams.putInt(EDFileChooserActivity.MODE_KEY, mode);
-		fileChooserParams.putInt(EDFileChooserActivity.FS_TYPE_KEY, fsType);
-		startFileChooser.putExtras(fileChooserParams);
-
-		int request = 0;
-
-		switch (mode) {
-		case EDFileChooserActivity.VOLUME_PICKER_MODE:
-			if (fsType == EDFileChooserActivity.LOCAL_FS) {
-				request = LOCAL_VOLUME_PICKER_REQUEST;
-			} else if (fsType == EDFileChooserActivity.EXT_SD_FS) {
-				request = EXT_SD_VOLUME_PICKER_REQUEST;
-			} else if (fsType == EDFileChooserActivity.DROPBOX_FS) {
-				request = DROPBOX_VOLUME_PICKER_REQUEST;
-			}
-			break;
-		case EDFileChooserActivity.CREATE_VOLUME_MODE:
-			if (fsType == EDFileChooserActivity.LOCAL_FS) {
-				request = LOCAL_VOLUME_CREATE_REQUEST;
-			} else if (fsType == EDFileChooserActivity.EXT_SD_FS) {
-				request = EXT_SD_VOLUME_CREATE_REQUEST;
-			} else if (fsType == EDFileChooserActivity.DROPBOX_FS) {
-				request = DROPBOX_VOLUME_CREATE_REQUEST;
-			}
-			break;
-		default:
-			Log.e(TAG, "Unknown mode id: " + mode);
-			return;
-		}
-
-		startActivityForResult(startFileChooser, request);
-	}
-
-	// Launch the volume browser activity for the given volume
-	private void launchVolumeBrowser(int volIndex) {
-		Intent startVolumeBrowser = new Intent(this,
-				EDVolumeBrowserActivity.class);
-
-		Bundle volumeBrowserParams = new Bundle();
-		volumeBrowserParams
-				.putInt(EDVolumeBrowserActivity.VOL_ID_KEY, volIndex);
-		startVolumeBrowser.putExtras(volumeBrowserParams);
-
-		startActivity(startVolumeBrowser);
 	}
 
 	// Handler for options menu selections
@@ -243,36 +279,6 @@ public class EDVolumeListActivity extends ListActivity {
 				showDialog(DIALOG_ERROR);
 			}
 		}
-	}
-
-	private void refreshList() {
-		if (mAdapter == null) {
-			mAdapter = new EDVolumeListAdapter(this, R.layout.volume_list_item,
-					mApp.getVolumeList());
-			this.setListAdapter(mAdapter);
-		} else {
-			mAdapter.notifyDataSetChanged();
-		}
-	}
-
-	private void importVolume(String volumeName, String volumePath,
-			int volumeType) {
-		EDVolume volume = new EDVolume(volumeName, volumePath, volumeType);
-		mApp.getVolumeList().add(volume);
-		mApp.getDbHelper().insertVolume(volume);
-		refreshList();
-	}
-
-	private void deleteVolume(EDVolume volume) {
-		mApp.getVolumeList().remove(volume);
-		mApp.getDbHelper().deleteVolume(volume);
-		refreshList();
-	}
-
-	private void renameVolume(EDVolume volume, String newName) {
-		mApp.getDbHelper().renameVolume(volume, newName);
-		volume.setName(newName);
-		refreshList();
 	}
 
 	/*
@@ -434,52 +440,29 @@ public class EDVolumeListActivity extends ListActivity {
 							switch (myId) {
 							case DIALOG_VOL_PASS:
 								// Show progress dialog
-								mProgDialog = new ProgressDialog(
-										EDVolumeListActivity.this);
-								mProgDialog
-										.setTitle(getString(R.string.pbkdf_dialog_title_str));
-								mProgDialog
-										.setMessage(getString(R.string.pbkdf_dialog_msg_str));
-								mProgDialog.setCancelable(true);
-								mProgDialog
-										.setOnCancelListener(new OnCancelListener() {
-											@Override
-											public void onCancel(
-													DialogInterface dialog) {
-												EDVolumeListActivity.this
-														.cancelAsyncTask();
-											}
-										});
-								mProgDialog.show();
+								createProgressBarForTask(
+										ASYNC_TASK_UNLOCK_PBKDF2, null);
 
 								// Launch async task to import volume
-								mAsyncTask = new EDUnlockVolumeTask(
-										mProgDialog, mVolumeType, null);
+								mAsyncTask = new UnlockVolumeTask(mProgDialog,
+										mVolumeType, null);
+								mAsyncTaskId = ASYNC_TASK_UNLOCK_PBKDF2;
+								mAsyncTask
+										.setActivity(EDVolumeListActivity.this);
 								mAsyncTask.execute(mSelectedVolume.getPath(),
 										value.toString());
 								break;
 							case DIALOG_VOL_CREATEPASS:
 								// Show progress dialog
-								mProgDialog = new ProgressDialog(
-										EDVolumeListActivity.this);
-								mProgDialog.setTitle(String
-										.format(getString(R.string.mkvol_dialog_title_str),
-												mCreateVolumeName));
-								mProgDialog.setCancelable(true);
-								mProgDialog
-										.setOnCancelListener(new OnCancelListener() {
-											@Override
-											public void onCancel(
-													DialogInterface dialog) {
-												EDVolumeListActivity.this
-														.cancelAsyncTask();
-											}
-										});
-								mProgDialog.show();
+								createProgressBarForTask(ASYNC_TASK_CREATE,
+										mCreateVolumeName);
 
 								// Launch async task to create volume
-								mAsyncTask = new EDCreateVolumeTask(
-										mProgDialog, mVolumeType);
+								mAsyncTask = new CreateVolumeTask(mProgDialog,
+										mVolumeType);
+								mAsyncTaskId = ASYNC_TASK_CREATE;
+								mAsyncTask
+										.setActivity(EDVolumeListActivity.this);
 								mAsyncTask.execute(mVolPickerResult,
 										mCreateVolumeName, value.toString());
 								break;
@@ -641,22 +624,8 @@ public class EDVolumeListActivity extends ListActivity {
 									.getListView().getCheckedItemPositions();
 							if (checked.get(0)) {
 								// Delete volume from disk
-								mProgDialog = new ProgressDialog(
-										EDVolumeListActivity.this);
-								mProgDialog.setTitle(String
-										.format(getString(R.string.delvol_dialog_title_str),
-												mSelectedVolume.getName()));
-								mProgDialog.setCancelable(true);
-								mProgDialog
-										.setOnCancelListener(new OnCancelListener() {
-											@Override
-											public void onCancel(
-													DialogInterface dialog) {
-												EDVolumeListActivity.this
-														.cancelAsyncTask();
-											}
-										});
-								mProgDialog.show();
+								createProgressBarForTask(ASYNC_TASK_DELETE,
+										mSelectedVolume.getName());
 
 								// Dropbox auth if needed
 								if (mSelectedVolume.getType() == EDVolume.DROPBOX_VOLUME) {
@@ -671,8 +640,11 @@ public class EDVolumeListActivity extends ListActivity {
 								}
 
 								// Launch async task to delete volume
-								mAsyncTask = new EDDeleteVolumeTask(
-										mProgDialog, mSelectedVolume);
+								mAsyncTask = new DeleteVolumeTask(mProgDialog,
+										mSelectedVolume);
+								mAsyncTaskId = ASYNC_TASK_DELETE;
+								mAsyncTask
+										.setActivity(EDVolumeListActivity.this);
 								mAsyncTask.execute();
 							} else {
 								// Just remove from the volume list
@@ -709,48 +681,6 @@ public class EDVolumeListActivity extends ListActivity {
 		}
 
 		return alertDialog;
-	}
-
-	/**
-	 * Unlock the currently selected volume
-	 */
-	private void unlockSelectedVolume() {
-		mVolumeType = mSelectedVolume.getType();
-
-		if (mVolumeType == EDVolume.DROPBOX_VOLUME) {
-			EDDropbox dropbox = mApp.getDropbox();
-
-			if (!dropbox.isAuthenticated()) {
-				dropbox.startLinkorAuth(EDVolumeListActivity.this);
-				if (!dropbox.isAuthenticated()) {
-					return;
-				}
-			}
-		}
-
-		// If key caching is enabled, see if a key is cached
-		byte[] cachedKey = null;
-		if (mPrefs.getBoolean("cache_key", false)) {
-			cachedKey = mApp.getDbHelper().getCachedKey(mSelectedVolume);
-		}
-
-		if (cachedKey == null) {
-			showDialog(DIALOG_VOL_PASS);
-		} else {
-			mProgDialog = new ProgressDialog(EDVolumeListActivity.this);
-			mProgDialog.setTitle(getString(R.string.unlocking_volume));
-			mProgDialog.setCancelable(true);
-			mProgDialog.setOnCancelListener(new OnCancelListener() {
-				@Override
-				public void onCancel(DialogInterface dialog) {
-					EDVolumeListActivity.this.cancelAsyncTask();
-				}
-			});
-			mProgDialog.show();
-
-			mAsyncTask = new EDUnlockVolumeTask(null, mVolumeType, cachedKey);
-			mAsyncTask.execute(mSelectedVolume.getPath(), null);
-		}
 	}
 
 	/*
@@ -821,32 +751,148 @@ public class EDVolumeListActivity extends ListActivity {
 		}
 	}
 
-	// Cancel the async task and hide the progress bar
-	private void cancelAsyncTask() {
-		if (mAsyncTask != null) {
-			mAsyncTask.cancel(true);
-			mAsyncTask = null;
+	// Launch the file chooser activity in the requested mode
+	private void launchFileChooser(int mode, int fsType) {
+		Intent startFileChooser = new Intent(this, EDFileChooserActivity.class);
+
+		Bundle fileChooserParams = new Bundle();
+		fileChooserParams.putInt(EDFileChooserActivity.MODE_KEY, mode);
+		fileChooserParams.putInt(EDFileChooserActivity.FS_TYPE_KEY, fsType);
+		startFileChooser.putExtras(fileChooserParams);
+
+		int request = 0;
+
+		switch (mode) {
+		case EDFileChooserActivity.VOLUME_PICKER_MODE:
+			if (fsType == EDFileChooserActivity.LOCAL_FS) {
+				request = LOCAL_VOLUME_PICKER_REQUEST;
+			} else if (fsType == EDFileChooserActivity.EXT_SD_FS) {
+				request = EXT_SD_VOLUME_PICKER_REQUEST;
+			} else if (fsType == EDFileChooserActivity.DROPBOX_FS) {
+				request = DROPBOX_VOLUME_PICKER_REQUEST;
+			}
+			break;
+		case EDFileChooserActivity.CREATE_VOLUME_MODE:
+			if (fsType == EDFileChooserActivity.LOCAL_FS) {
+				request = LOCAL_VOLUME_CREATE_REQUEST;
+			} else if (fsType == EDFileChooserActivity.EXT_SD_FS) {
+				request = EXT_SD_VOLUME_CREATE_REQUEST;
+			} else if (fsType == EDFileChooserActivity.DROPBOX_FS) {
+				request = DROPBOX_VOLUME_CREATE_REQUEST;
+			}
+			break;
+		default:
+			Log.e(TAG, "Unknown mode id: " + mode);
+			return;
 		}
 
-		if (mProgDialog != null) {
-			mProgDialog.dismiss();
-			mProgDialog = null;
+		startActivityForResult(startFileChooser, request);
+	}
+
+	// Launch the volume browser activity for the given volume
+	private void launchVolumeBrowser(int volIndex) {
+		Intent startVolumeBrowser = new Intent(this,
+				EDVolumeBrowserActivity.class);
+
+		Bundle volumeBrowserParams = new Bundle();
+		volumeBrowserParams
+				.putInt(EDVolumeBrowserActivity.VOL_ID_KEY, volIndex);
+		startVolumeBrowser.putExtras(volumeBrowserParams);
+
+		startActivity(startVolumeBrowser);
+	}
+
+	private void refreshList() {
+		if (mAdapter == null) {
+			mAdapter = new EDVolumeListAdapter(this, R.layout.volume_list_item,
+					mApp.getVolumeList());
+			this.setListAdapter(mAdapter);
+		} else {
+			mAdapter.notifyDataSetChanged();
 		}
 	}
 
-	// Back button press handler - cancel the async task
-	@Override
-	public void onBackPressed() {
-		super.onBackPressed();
-		cancelAsyncTask();
+	private void importVolume(String volumeName, String volumePath,
+			int volumeType) {
+		EDVolume volume = new EDVolume(volumeName, volumePath, volumeType);
+		mApp.getVolumeList().add(volume);
+		mApp.getDbHelper().insertVolume(volume);
+		refreshList();
 	}
 
-	// Pause handler, cancel async task when the activity isn't foreground any
-	// more
-	@Override
-	protected void onPause() {
-		super.onPause();
-		cancelAsyncTask();
+	private void deleteVolume(EDVolume volume) {
+		mApp.getVolumeList().remove(volume);
+		mApp.getDbHelper().deleteVolume(volume);
+		refreshList();
+	}
+
+	private void renameVolume(EDVolume volume, String newName) {
+		mApp.getDbHelper().renameVolume(volume, newName);
+		volume.setName(newName);
+		refreshList();
+	}
+
+	/**
+	 * Unlock the currently selected volume
+	 */
+	private void unlockSelectedVolume() {
+		mVolumeType = mSelectedVolume.getType();
+
+		if (mVolumeType == EDVolume.DROPBOX_VOLUME) {
+			EDDropbox dropbox = mApp.getDropbox();
+
+			if (!dropbox.isAuthenticated()) {
+				dropbox.startLinkorAuth(EDVolumeListActivity.this);
+				if (!dropbox.isAuthenticated()) {
+					return;
+				}
+			}
+		}
+
+		// If key caching is enabled, see if a key is cached
+		byte[] cachedKey = null;
+		if (mPrefs.getBoolean("cache_key", false)) {
+			cachedKey = mApp.getDbHelper().getCachedKey(mSelectedVolume);
+		}
+
+		if (cachedKey == null) {
+			showDialog(DIALOG_VOL_PASS);
+		} else {
+			createProgressBarForTask(ASYNC_TASK_UNLOCK_CACHE, null);
+
+			mAsyncTask = new UnlockVolumeTask(null, mVolumeType, cachedKey);
+			mAsyncTaskId = ASYNC_TASK_UNLOCK_CACHE;
+			mAsyncTask.setActivity(EDVolumeListActivity.this);
+			mAsyncTask.execute(mSelectedVolume.getPath(), null);
+		}
+	}
+
+	private void createProgressBarForTask(int taskId, String strArg) {
+		mProgDialog = new ProgressDialog(EDVolumeListActivity.this);
+		switch (taskId) {
+		case ASYNC_TASK_CREATE:
+			mProgDialog.setTitle(String.format(
+					getString(R.string.mkvol_dialog_title_str), strArg));
+			break;
+		case ASYNC_TASK_DELETE:
+			mProgDialog.setTitle(String.format(
+					getString(R.string.delvol_dialog_title_str), strArg));
+			break;
+		case ASYNC_TASK_UNLOCK_CACHE:
+			mProgDialog.setTitle(getString(R.string.unlocking_volume));
+			break;
+		case ASYNC_TASK_UNLOCK_PBKDF2:
+			mProgDialog.setTitle(getString(R.string.pbkdf_dialog_title_str));
+			mProgDialog.setMessage(getString(R.string.pbkdf_dialog_msg_str));
+			break;
+		default:
+			Log.e(TAG, "Unknown task ID: " + taskId);
+			break;
+		}
+
+		mProgDialog.setCancelable(false);
+		mProgDialog.show();
+		mSavedProgBarStrArg = strArg;
 	}
 
 	private EncFSFileProvider getFileProvider(int volumeType, String relPath) {
@@ -866,11 +912,8 @@ public class EDVolumeListActivity extends ListActivity {
 		}
 	}
 
-	private class EDUnlockVolumeTask extends
-			AsyncTask<String, Void, EncFSVolume> {
-
-		// The progress dialog for this task
-		private ProgressDialog myDialog;
+	private class UnlockVolumeTask extends
+			EDAsyncTask<String, Void, EncFSVolume> {
 
 		// Volume type
 		private int volumeType;
@@ -881,10 +924,10 @@ public class EDVolumeListActivity extends ListActivity {
 		// Invalid cached key
 		boolean invalidCachedKey = false;
 
-		public EDUnlockVolumeTask(ProgressDialog dialog, int volumeType,
+		public UnlockVolumeTask(ProgressDialog dialog, int volumeType,
 				byte[] cachedKey) {
 			super();
-			this.myDialog = dialog;
+			setProgressDialog(dialog);
 			this.volumeType = volumeType;
 			this.cachedKey = cachedKey;
 		}
@@ -905,8 +948,8 @@ public class EDVolumeListActivity extends ListActivity {
 			}
 
 			// Get file provider for this volume
-			EncFSFileProvider fileProvider = getFileProvider(volumeType,
-					args[0]);
+			EncFSFileProvider fileProvider = ((EDVolumeListActivity) getActivity())
+					.getFileProvider(volumeType, args[0]);
 
 			// Unlock the volume, takes long due to PBKDF2 calculation
 			try {
@@ -920,11 +963,12 @@ public class EDVolumeListActivity extends ListActivity {
 				if (cachedKey != null) {
 					invalidCachedKey = true;
 				} else {
-					mErrDialogText = getString(R.string.incorrect_pwd_str);
+					((EDVolumeListActivity) getActivity()).mErrDialogText = getString(R.string.incorrect_pwd_str);
 				}
 			} catch (Exception e) {
 				Log.e(TAG, e.getMessage());
-				mErrDialogText = e.getMessage();
+				((EDVolumeListActivity) getActivity()).mErrDialogText = e
+						.getMessage();
 			}
 
 			if (cachedKey == null) {
@@ -954,40 +998,45 @@ public class EDVolumeListActivity extends ListActivity {
 							Toast.LENGTH_SHORT).show();
 
 					// Invalidate cached key from DB
-					mApp.getDbHelper().clearKey(mSelectedVolume);
+					((EDVolumeListActivity) getActivity()).mApp.getDbHelper()
+							.clearKey(mSelectedVolume);
 
 					// Kick off password dialog
-					showDialog(DIALOG_VOL_PASS);
+					((EDVolumeListActivity) getActivity())
+							.showDialog(DIALOG_VOL_PASS);
 
 					return;
 				}
 
 				if (result != null) {
-					mSelectedVolume.unlock(result);
+					((EDVolumeListActivity) getActivity()).mSelectedVolume
+							.unlock(result);
 
-					mAdapter.notifyDataSetChanged();
+					((EDVolumeListActivity) getActivity()).mAdapter
+							.notifyDataSetChanged();
 
 					if (cachedKey == null) {
 						// Cache key in DB if preference is enabled
-						if (mPrefs.getBoolean("cache_key", false)) {
+						if (((EDVolumeListActivity) getActivity()).mPrefs
+								.getBoolean("cache_key", false)) {
 							byte[] keyToCache = result.getPasswordKey();
-							mApp.getDbHelper().cacheKey(mSelectedVolume,
-									keyToCache);
+							((EDVolumeListActivity) getActivity()).mApp
+									.getDbHelper().cacheKey(mSelectedVolume,
+											keyToCache);
 						}
 					}
 
-					launchVolumeBrowser(mSelectedVolIdx);
+					((EDVolumeListActivity) getActivity())
+							.launchVolumeBrowser(mSelectedVolIdx);
 				} else {
-					showDialog(DIALOG_ERROR);
+					((EDVolumeListActivity) getActivity())
+							.showDialog(DIALOG_ERROR);
 				}
 			}
 		}
 	}
 
-	private class EDCreateVolumeTask extends AsyncTask<String, Void, Boolean> {
-
-		// The progress dialog for this task
-		private ProgressDialog myDialog;
+	private class CreateVolumeTask extends EDAsyncTask<String, Void, Boolean> {
 
 		// Name of the volume being created
 		private String volumeName;
@@ -1001,9 +1050,9 @@ public class EDVolumeListActivity extends ListActivity {
 		// Password
 		private String password;
 
-		public EDCreateVolumeTask(ProgressDialog dialog, int volumeType) {
+		public CreateVolumeTask(ProgressDialog dialog, int volumeType) {
 			super();
-			this.myDialog = dialog;
+			setProgressDialog(dialog);
 			this.volumeType = volumeType;
 		}
 
@@ -1013,7 +1062,8 @@ public class EDVolumeListActivity extends ListActivity {
 			volumeName = args[1];
 			password = args[2];
 
-			EncFSFileProvider rootProvider = getFileProvider(volumeType, "/");
+			EncFSFileProvider rootProvider = ((EDVolumeListActivity) getActivity())
+					.getFileProvider(volumeType, "/");
 
 			try {
 				if (!rootProvider.exists(args[0])) {
@@ -1041,8 +1091,8 @@ public class EDVolumeListActivity extends ListActivity {
 				return false;
 			}
 
-			EncFSFileProvider volumeProvider = getFileProvider(volumeType,
-					volumePath);
+			EncFSFileProvider volumeProvider = ((EDVolumeListActivity) getActivity())
+					.getFileProvider(volumeType, volumePath);
 
 			// Create the volume
 			try {
@@ -1067,33 +1117,32 @@ public class EDVolumeListActivity extends ListActivity {
 
 			if (!isCancelled()) {
 				if (result) {
-					importVolume(volumeName, volumePath, volumeType);
+					((EDVolumeListActivity) getActivity()).importVolume(
+							volumeName, volumePath, volumeType);
 				} else {
-					showDialog(DIALOG_ERROR);
+					((EDVolumeListActivity) getActivity())
+							.showDialog(DIALOG_ERROR);
 				}
 			}
 		}
 	}
 
-	private class EDDeleteVolumeTask extends AsyncTask<String, Void, Boolean> {
-
-		// The progress dialog for this task
-		private ProgressDialog myDialog;
+	private class DeleteVolumeTask extends EDAsyncTask<String, Void, Boolean> {
 
 		// Volume being deleted
 		private EDVolume volume;
 
-		public EDDeleteVolumeTask(ProgressDialog dialog, EDVolume volume) {
+		public DeleteVolumeTask(ProgressDialog dialog, EDVolume volume) {
 			super();
-			this.myDialog = dialog;
+			setProgressDialog(dialog);
 			this.volume = volume;
 		}
 
 		@Override
 		protected Boolean doInBackground(String... args) {
 
-			EncFSFileProvider rootProvider = getFileProvider(volume.getType(),
-					"/");
+			EncFSFileProvider rootProvider = ((EDVolumeListActivity) getActivity())
+					.getFileProvider(volume.getType(), "/");
 
 			try {
 				if (!rootProvider.exists(volume.getPath())) {
@@ -1129,9 +1178,10 @@ public class EDVolumeListActivity extends ListActivity {
 
 			if (!isCancelled()) {
 				if (result) {
-					deleteVolume(volume);
+					((EDVolumeListActivity) getActivity()).deleteVolume(volume);
 				} else {
-					showDialog(DIALOG_ERROR);
+					((EDVolumeListActivity) getActivity())
+							.showDialog(DIALOG_ERROR);
 				}
 			}
 		}

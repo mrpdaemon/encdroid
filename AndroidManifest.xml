@@ -39,13 +39,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".EDFileChooserActivity"
-            android:configChanges="orientation|screenSize" >
+        <activity android:name=".EDFileChooserActivity" >
         </activity>
-        <activity
-            android:name=".EDVolumeBrowserActivity"
-            android:configChanges="orientation|screenSize" >
+        <activity android:name=".EDVolumeBrowserActivity" >
         </activity>
         <activity android:name=".EDAccountsActivity" >
         </activity>

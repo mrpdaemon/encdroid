@@ -64,11 +64,11 @@ public class EDFileChooserActivity extends ListActivity {
 	public final static int EXPORT_FILE_MODE = 2;
 	public final static int CREATE_VOLUME_MODE = 3;
 
-	// Parameter key for FS type
-	public final static String FS_TYPE_KEY = "fs_type";
-
 	// Parameter key for export file name
 	public final static String EXPORT_FILE_KEY = "export_file";
+
+	// Parameter key for FS type
+	public final static String FS_TYPE_KEY = "fs_type";
 
 	// Valid FS types
 	public final static int LOCAL_FS = 0;
@@ -80,6 +80,9 @@ public class EDFileChooserActivity extends ListActivity {
 
 	// Name of the SD card directory for copying files into
 	public final static String ENCDROID_SD_DIR_NAME = "Encdroid";
+
+	// Instance state bundle key for current directory
+	public final static String CUR_DIR_KEY = "current_dir";
 
 	// Logger tag
 	private static final String TAG = "EDFileChooserActivity";
@@ -134,15 +137,22 @@ public class EDFileChooserActivity extends ListActivity {
 
 		setContentView(R.layout.file_chooser);
 
-		Bundle params = getIntent().getExtras();
-
-		mMode = params.getInt(MODE_KEY);
-		mFsType = params.getInt(FS_TYPE_KEY);
-		mExportFileName = params.getString(EXPORT_FILE_KEY);
+		if (savedInstanceState == null) {
+			// New activity creation
+			Bundle params = getIntent().getExtras();
+			mMode = params.getInt(MODE_KEY);
+			mFsType = params.getInt(FS_TYPE_KEY);
+			mExportFileName = params.getString(EXPORT_FILE_KEY);
+			mCurrentDir = "/";
+		} else {
+			// Restoring previously killed activity
+			mMode = savedInstanceState.getInt(MODE_KEY);
+			mFsType = savedInstanceState.getInt(FS_TYPE_KEY);
+			mExportFileName = savedInstanceState.getString(EXPORT_FILE_KEY);
+			mCurrentDir = savedInstanceState.getString(CUR_DIR_KEY);
+		}
 
 		mCurFileList = new ArrayList<EDFileChooserItem>();
-
-		mCurrentDir = "/";
 
 		mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -187,6 +197,15 @@ public class EDFileChooserActivity extends ListActivity {
 		mListHeader.setTypeface(null, Typeface.BOLD);
 		mListHeader.setTextSize(16);
 		this.getListView().addHeaderView(mListHeader);
+	}
+
+	@Override
+	protected void onSaveInstanceState(Bundle outState) {
+		outState.putInt(MODE_KEY, mMode);
+		outState.putInt(FS_TYPE_KEY, mFsType);
+		outState.putString(EXPORT_FILE_KEY, mExportFileName);
+		outState.putString(CUR_DIR_KEY, mCurrentDir);
+		super.onSaveInstanceState(outState);
 	}
 
 	// Create the options menu

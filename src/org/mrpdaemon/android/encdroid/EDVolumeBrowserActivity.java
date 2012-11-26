@@ -88,6 +88,18 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	public final static int PICK_FILE_REQUEST = 1;
 	public final static int EXPORT_FILE_REQUEST = 2;
 
+	// Saved instance state keys
+	private final static String SAVED_CUR_DIR_PATH_KEY = "cur_dir_path";
+	private final static String SAVED_PASTE_MODE_KEY = "paste_mode";
+	private final static String SAVED_PASTE_FILE_PATH_KEY = "paste_file_path";
+	private final static String SAVED_OPEN_FILE_PATH_KEY = "open_file_path";
+	private final static String SAVED_OPEN_FILE_NAME_KEY = "open_file_name";
+	private final static String SAVED_IMPORT_FILE_NAME_KEY = "import_file_name";
+	private final static String SAVED_ASYNC_TASK_ID_KEY = "async_task_id";
+	private final static String SAVED_PROGRESS_BAR_MAX_KEY = "prog_bar_max";
+	private final static String SAVED_PROGRESS_BAR_PROG_KEY = "prog_bar_prog";
+	private final static String SAVED_PROGRESS_BAR_STR_ARG_KEY = "prog_bar_strarg";
+
 	// Dialog ID's
 	private final static int DIALOG_ERROR = 0;
 	private final static int DIALOG_FILE_RENAME = 1;
@@ -102,6 +114,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	private final static int ASYNC_TASK_RENAME = 4;
 	private final static int ASYNC_TASK_DELETE = 5;
 	private final static int ASYNC_TASK_CREATE_DIR = 6;
+	private final static int ASYNC_TASK_PASTE = 7;
 
 	// Logger tag
 	private final static String TAG = "EDVolumeBrowserActivity";
@@ -134,13 +147,25 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	private ProgressDialog mProgDialog = null;
 
 	// Async task object
-	private AsyncTask<Void, Void, Boolean> mAsyncTask = null;
+	private EDAsyncTask<Void, Void, Boolean> mAsyncTask = null;
+
+	// Async task ID
+	private int mAsyncTaskId = -1;
 
 	// File observer
 	private EDFileObserver mFileObserver;
 
 	// EncFSFile that is currently opened
 	private EncFSFile mOpenFile;
+
+	// Path to the opened file (used during restore of mOpenFile)
+	private String mOpenFilePath = null;
+
+	// Name of the opened file (used for display purposes)
+	private String mOpenFileName = null;
+
+	// Name of the file being imported
+	private String mImportFileName;
 
 	// File that is currently selected
 	private EDFileChooserItem mSelectedFile;
@@ -171,6 +196,23 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	// Text view for list header
 	private TextView mListHeader = null;
 
+	// Class to hold context for restoring an activity after being recreated
+	private class ActivityRestoreContext {
+		public EDVolume savedVolume;
+		public EDFileObserver savedObserver;
+		public EDFileChooserItem savedSelectedFile;
+		public EDAsyncTask<Void, Void, Boolean> savedTask;
+	}
+
+	// Saved instance state for current EncFS directory
+	private String mSavedCurDirPath = null;
+
+	// Saved instance state for paste file path
+	private String mSavedPasteFilePath = null;
+
+	// Saved instance state for progress bar string argument
+	private String mSavedProgBarStrArg = null;
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -179,83 +221,202 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 
-		Bundle params = getIntent().getExtras();
-
 		mApp = (EDApplication) getApplication();
 
-		int position = params.getInt(VOL_ID_KEY);
-		mEDVolume = mApp.getVolumeList().get(position);
-		mVolume = mEDVolume.getVolume();
-		mDirStack = new Stack<EncFSFile>();
+		mCurFileList = new ArrayList<EDFileChooserItem>();
 
-		if (mVolume != null) {
-			mCurEncFSDir = mVolume.getRootDir();
-
-			mCurFileList = new ArrayList<EDFileChooserItem>();
-
-			// Start monitoring external storage state
-			mExternalStorageReceiver = new BroadcastReceiver() {
-				@Override
-				public void onReceive(Context context, Intent intent) {
-					updateExternalStorageState();
-				}
-			};
-			IntentFilter filter = new IntentFilter();
-			filter.addAction(Intent.ACTION_MEDIA_MOUNTED);
-			filter.addAction(Intent.ACTION_MEDIA_REMOVED);
-			registerReceiver(mExternalStorageReceiver, filter);
-			updateExternalStorageState();
-
-			if (mExternalStorageAvailable == false) {
-				Log.e(TAG, "No SD card is available");
-				mErrDialogText = getString(R.string.error_no_sd_card);
-				showDialog(DIALOG_ERROR);
-				finish();
+		// Start monitoring external storage state
+		mExternalStorageReceiver = new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				updateExternalStorageState();
 			}
+		};
+		IntentFilter filter = new IntentFilter();
+		filter.addAction(Intent.ACTION_MEDIA_MOUNTED);
+		filter.addAction(Intent.ACTION_MEDIA_REMOVED);
+		registerReceiver(mExternalStorageReceiver, filter);
+		updateExternalStorageState();
 
-			// Restore UI elements
-			super.onCreate(savedInstanceState);
+		if (mExternalStorageAvailable == false) {
+			Log.e(TAG, "No SD card is available");
+			mErrDialogText = getString(R.string.error_no_sd_card);
+			showDialog(DIALOG_ERROR);
+			finish();
+		}
 
-			setContentView(R.layout.file_chooser);
+		// Restore UI elements
+		super.onCreate(savedInstanceState);
+
+		setContentView(R.layout.file_chooser);
+
+		registerForContextMenu(this.getListView());
+
+		if (mApp.isActionBarAvailable()) {
+			mActionBar = new EDActionBar(this);
+			mActionBar.setDisplayHomeAsUpEnabled(true);
+		}
+
+		mListHeader = new TextView(this);
+		mListHeader.setTypeface(null, Typeface.BOLD);
+		mListHeader.setTextSize(16);
+		this.getListView().addHeaderView(mListHeader);
+
+		if (savedInstanceState == null) {
+			// Activity being created for the first time
+			Bundle params = getIntent().getExtras();
+			int position = params.getInt(VOL_ID_KEY);
+			mEDVolume = mApp.getVolumeList().get(position);
+			mVolume = mEDVolume.getVolume();
+			mCurEncFSDir = mVolume.getRootDir();
+			mDirStack = new Stack<EncFSFile>();
 
 			launchFillTask();
+		} else {
+			// Activity being recreated
+			ActivityRestoreContext restoreContext = (ActivityRestoreContext) getLastNonConfigurationInstance();
+			if (restoreContext == null) {
+				/*
+				 * If getLastNonConfigurationInstance() returned null the
+				 * activity was killed due to low memory and is being recreated.
+				 * Unfortunately we've lost all the volume state at that point
+				 * so we don't have any choice but to exit back to the volume
+				 * list and start over.
+				 */
+				exitToVolumeList();
+				return;
+			}
+			mEDVolume = restoreContext.savedVolume;
+			mVolume = mEDVolume.getVolume();
+			mFileObserver = restoreContext.savedObserver;
+			mSelectedFile = restoreContext.savedSelectedFile;
+			mAsyncTask = restoreContext.savedTask;
 
-			registerForContextMenu(this.getListView());
+			mSavedCurDirPath = savedInstanceState
+					.getString(SAVED_CUR_DIR_PATH_KEY);
 
-			if (mApp.isActionBarAvailable()) {
-				mActionBar = new EDActionBar(this);
-				mActionBar.setDisplayHomeAsUpEnabled(true);
+			// Restore open file state
+			mOpenFile = null;
+			String openFilePath = savedInstanceState
+					.getString(SAVED_OPEN_FILE_PATH_KEY);
+			String openFileName = savedInstanceState
+					.getString(SAVED_OPEN_FILE_NAME_KEY);
+			if (!openFilePath.equals("")) {
+				mOpenFilePath = openFilePath;
+				mOpenFileName = openFileName;
+			} else {
+				mOpenFilePath = null;
+				mOpenFileName = null;
 			}
 
-			mListHeader = new TextView(this);
-			mListHeader.setTypeface(null, Typeface.BOLD);
-			mListHeader.setTextSize(16);
-			this.getListView().addHeaderView(mListHeader);
-		} else {
-			/*
-			 * Activity is being recreated after task was killed, just exit back
-			 * to the volume list.
-			 */
-			super.onCreate(savedInstanceState);
+			// Restore paste mode
+			mPasteMode = savedInstanceState.getInt(SAVED_PASTE_MODE_KEY);
+			mSavedPasteFilePath = savedInstanceState
+					.getString(SAVED_PASTE_FILE_PATH_KEY);
 
-			Intent intent = new Intent(this, EDVolumeListActivity.class);
-			intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-			startActivity(intent);
-			finish();
+			// Restore import file state
+			mImportFileName = savedInstanceState
+					.getString(SAVED_IMPORT_FILE_NAME_KEY);
+
+			// Restore async task ID
+			mAsyncTaskId = savedInstanceState.getInt(SAVED_ASYNC_TASK_ID_KEY);
+
+			if (mAsyncTask != null) {
+				// Create new progress dialog and replace the old one
+				createProgressBarForTask(mAsyncTaskId,
+						savedInstanceState
+								.getString(SAVED_PROGRESS_BAR_STR_ARG_KEY));
+				mProgDialog.setMax(savedInstanceState
+						.getInt(SAVED_PROGRESS_BAR_MAX_KEY));
+				mProgDialog.setProgress(savedInstanceState
+						.getInt(SAVED_PROGRESS_BAR_PROG_KEY));
+				mAsyncTask.setProgressDialog(mProgDialog);
+
+				// Fix the activity for the task
+				mAsyncTask.setActivity(this);
+			}
+
+			// Execute async task to restore instance state
+			if (mProgDialog == null || !mProgDialog.isShowing()) {
+				mProgDialog = new ProgressDialog(EDVolumeBrowserActivity.this);
+				mProgDialog.setTitle(getString(R.string.loading_contents));
+				mProgDialog.setCancelable(false);
+				mProgDialog.show();
+				new ActivityRestoreTask(mProgDialog, savedInstanceState)
+						.execute();
+			} else {
+				new ActivityRestoreTask(null, savedInstanceState).execute();
+			}
 		}
 	}
 
-	// Update the external storage state
-	void updateExternalStorageState() {
-		String state = Environment.getExternalStorageState();
-		if (Environment.MEDIA_MOUNTED.equals(state)) {
-			mExternalStorageAvailable = mExternalStorageWriteable = true;
-		} else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
-			mExternalStorageAvailable = true;
-			mExternalStorageWriteable = false;
+	// Retain the EDVolume object through activity being killed
+	@Override
+	public Object onRetainNonConfigurationInstance() {
+		ActivityRestoreContext restoreContext = new ActivityRestoreContext();
+		restoreContext.savedVolume = mEDVolume;
+		restoreContext.savedObserver = mFileObserver;
+		restoreContext.savedSelectedFile = mSelectedFile;
+		if (mAsyncTask != null
+				&& mAsyncTask.getStatus() == AsyncTask.Status.RUNNING) {
+			// Clear progress bar so we don't leak it
+			mProgDialog.dismiss();
+			mAsyncTask.setProgressDialog(null);
+			// Clear the activity so we don't leak it
+			mAsyncTask.setActivity(null);
+			restoreContext.savedTask = mAsyncTask;
 		} else {
-			mExternalStorageAvailable = mExternalStorageWriteable = false;
+			restoreContext.savedTask = null;
 		}
+		return restoreContext;
+	}
+
+	// Retain state information through activity being killed
+	@Override
+	protected void onSaveInstanceState(Bundle outState) {
+		if (mCurEncFSDir == null) {
+			// Being recreated again before EDRestoreActivityTask ran
+			outState.putString(SAVED_CUR_DIR_PATH_KEY, mSavedCurDirPath);
+		} else {
+			outState.putString(SAVED_CUR_DIR_PATH_KEY, mCurEncFSDir.getPath());
+		}
+		outState.putInt(SAVED_PASTE_MODE_KEY, mPasteMode);
+		if (mPasteMode != PASTE_OP_NONE) {
+			if (mPasteFile == null) {
+				outState.putString(SAVED_PASTE_FILE_PATH_KEY,
+						mSavedPasteFilePath);
+			} else {
+				outState.putString(SAVED_PASTE_FILE_PATH_KEY,
+						mPasteFile.getPath());
+			}
+		}
+		if (mOpenFile != null) {
+			outState.putString(SAVED_OPEN_FILE_PATH_KEY, mOpenFile.getPath());
+			outState.putString(SAVED_OPEN_FILE_NAME_KEY, mOpenFile.getName());
+		} else {
+			if (mOpenFilePath != null) {
+				outState.putString(SAVED_OPEN_FILE_PATH_KEY, mOpenFilePath);
+			} else {
+				outState.putString(SAVED_OPEN_FILE_PATH_KEY, "");
+			}
+			if (mOpenFileName != null) {
+				outState.putString(SAVED_OPEN_FILE_NAME_KEY, mOpenFileName);
+			} else {
+				outState.putString(SAVED_OPEN_FILE_NAME_KEY, "");
+			}
+		}
+		outState.putString(SAVED_IMPORT_FILE_NAME_KEY, mImportFileName);
+		outState.putInt(SAVED_ASYNC_TASK_ID_KEY, mAsyncTaskId);
+
+		if (mProgDialog != null) {
+			outState.putInt(SAVED_PROGRESS_BAR_MAX_KEY, mProgDialog.getMax());
+			outState.putInt(SAVED_PROGRESS_BAR_PROG_KEY,
+					mProgDialog.getProgress());
+			outState.putString(SAVED_PROGRESS_BAR_STR_ARG_KEY,
+					mSavedProgBarStrArg);
+		}
+
+		super.onSaveInstanceState(outState);
 	}
 
 	// Clean stuff up
@@ -306,19 +467,11 @@ public class EDVolumeBrowserActivity extends ListActivity {
 			showDialog(DIALOG_CREATE_FOLDER);
 			return true;
 		case R.id.volume_browser_menu_paste:
-			// Show progress dialog
-			mProgDialog = new ProgressDialog(EDVolumeBrowserActivity.this);
-			if (mPasteMode == PASTE_OP_COPY) {
-				mProgDialog.setTitle(getString(R.string.copy_dialog_title_str));
-			} else {
-				mProgDialog.setTitle(getString(R.string.cut_dialog_title_str));
-			}
-			mProgDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-			mProgDialog.setCancelable(false);
-			mProgDialog.show();
-
 			// Launch async task to paste file
-			mAsyncTask = new EDPasteFileTask(mProgDialog);
+			createProgressBarForTask(ASYNC_TASK_PASTE, null);
+			mAsyncTask = new PasteFileTask(mProgDialog);
+			mAsyncTaskId = ASYNC_TASK_PASTE;
+			mAsyncTask.setActivity(this);
 			mAsyncTask.execute();
 
 			return true;
@@ -548,6 +701,318 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		return alertDialog;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see android.app.ListActivity#onListItemClick(android.widget.ListView,
+	 * android.view.View, int, long)
+	 */
+	@Override
+	protected void onListItemClick(ListView l, View v, int position, long id) {
+		super.onListItemClick(l, v, position, id);
+
+		// We use position - 1 since we have an extra header
+		if (position == 0) {
+			return;
+		}
+		EDFileChooserItem selected = mAdapter.getItem(position - 1);
+
+		if (selected.isDirectory()) {
+			if (selected.getName().equals("..")) {
+				// Chdir up
+				mCurEncFSDir = mDirStack.pop();
+			} else {
+				mDirStack.push(mCurEncFSDir);
+				mCurEncFSDir = selected.getFile();
+			}
+
+			launchFillTask();
+		} else {
+			// Launch file in external application
+
+			if (mExternalStorageWriteable == false) {
+				mErrDialogText = getString(R.string.error_sd_readonly);
+				showDialog(DIALOG_ERROR);
+				return;
+			}
+
+			// Create sdcard dir if it doesn't exist
+			File encDroidDir = new File(
+					Environment.getExternalStorageDirectory(),
+					ENCDROID_SD_DIR_NAME);
+			if (!encDroidDir.exists()) {
+				encDroidDir.mkdir();
+			}
+
+			mOpenFile = selected.getFile();
+			mOpenFileName = mOpenFile.getName();
+			File dstFile = new File(encDroidDir, mOpenFileName);
+
+			// Launch async task to decrypt the file
+			launchAsyncTask(ASYNC_TASK_DECRYPT, dstFile, mOpenFile);
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see android.app.Activity#onContextItemSelected(android.view.MenuItem)
+	 */
+	@Override
+	public boolean onContextItemSelected(MenuItem item) {
+		AdapterContextMenuInfo info = (AdapterContextMenuInfo) item
+				.getMenuInfo();
+		switch (item.getItemId()) {
+		case R.id.volume_browser_menu_rename:
+			mSelectedFile = mAdapter.getItem((int) info.id);
+			showDialog(DIALOG_FILE_RENAME);
+			return true;
+		case R.id.volume_browser_menu_delete:
+			mSelectedFile = mAdapter.getItem((int) info.id);
+			showDialog(DIALOG_FILE_DELETE);
+			return true;
+		case R.id.volume_browser_menu_cut:
+			mSelectedFile = mAdapter.getItem((int) info.id);
+			mPasteFile = mSelectedFile.getFile();
+			mPasteMode = PASTE_OP_CUT;
+
+			if (mApp.isActionBarAvailable()) {
+				mActionBar.invalidateOptionsMenu(this);
+			}
+
+			// Show toast
+			Toast.makeText(
+					getApplicationContext(),
+					String.format(getString(R.string.toast_cut_file),
+							mPasteFile.getName()), Toast.LENGTH_SHORT).show();
+
+			return true;
+		case R.id.volume_browser_menu_copy:
+			mSelectedFile = mAdapter.getItem((int) info.id);
+			mPasteFile = mSelectedFile.getFile();
+			mPasteMode = PASTE_OP_COPY;
+
+			if (mApp.isActionBarAvailable()) {
+				mActionBar.invalidateOptionsMenu(this);
+			}
+
+			// Show toast
+			Toast.makeText(
+					getApplicationContext(),
+					String.format(getString(R.string.toast_copy_file),
+							mPasteFile.getName()), Toast.LENGTH_SHORT).show();
+
+			return true;
+		case R.id.volume_browser_menu_export:
+			mSelectedFile = mAdapter.getItem((int) info.id);
+			mOpenFile = mSelectedFile.getFile();
+			mOpenFileName = mOpenFile.getName();
+
+			Intent startFileExport = new Intent(this,
+					EDFileChooserActivity.class);
+
+			Bundle exportFileParams = new Bundle();
+			exportFileParams.putInt(EDFileChooserActivity.MODE_KEY,
+					EDFileChooserActivity.EXPORT_FILE_MODE);
+			exportFileParams.putString(EDFileChooserActivity.EXPORT_FILE_KEY,
+					mSelectedFile.getName());
+			startFileExport.putExtras(exportFileParams);
+
+			startActivityForResult(startFileExport, EXPORT_FILE_REQUEST);
+			return true;
+		default:
+			return super.onContextItemSelected(item);
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see android.app.Activity#onCreateContextMenu(android.view.ContextMenu,
+	 * android.view.View, android.view.ContextMenu.ContextMenuInfo)
+	 */
+	@Override
+	public void onCreateContextMenu(ContextMenu menu, View v,
+			ContextMenuInfo menuInfo) {
+		super.onCreateContextMenu(menu, v, menuInfo);
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.volume_browser_context, menu);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see android.app.Activity#onActivityResult(int, int,
+	 * android.content.Intent)
+	 */
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+
+		switch (requestCode) {
+		case VIEW_FILE_REQUEST:
+			// Don't need to watch any more
+			mFileObserver.stopWatching();
+
+			File dstFile = new File(mFileObserver.getPath());
+
+			// If the file was modified we need to sync it back
+			if (mFileObserver.wasModified()) {
+				// Sync file contents
+				try {
+					launchAsyncTask(ASYNC_TASK_SYNC, dstFile, mOpenFile);
+				} catch (Exception e) {
+					mErrDialogText = e.getMessage();
+					showDialog(DIALOG_ERROR);
+				}
+			} else {
+				// File not modified, delete from SD
+				dstFile.delete();
+			}
+
+			// Clean up reference to the file observer
+			mFileObserver = null;
+
+			break;
+		case PICK_FILE_REQUEST:
+			if (resultCode == Activity.RESULT_OK) {
+				String result = data.getExtras().getString(
+						EDFileChooserActivity.RESULT_KEY);
+				String importPath = new File(
+						Environment.getExternalStorageDirectory(), result)
+						.getAbsolutePath();
+				Log.d(TAG, "Importing file: " + importPath);
+
+				File importFile = new File(importPath);
+				mImportFileName = importFile.getName();
+
+				// Launch async task to complete importing
+				launchAsyncTask(ASYNC_TASK_IMPORT, importFile, null);
+			} else {
+				Log.d(TAG, "File chooser returned unexpected return code: "
+						+ resultCode);
+			}
+			break;
+		case EXPORT_FILE_REQUEST:
+			if (resultCode == Activity.RESULT_OK) {
+				String result = data.getExtras().getString(
+						EDFileChooserActivity.RESULT_KEY);
+				String exportPath = new File(
+						Environment.getExternalStorageDirectory(), result)
+						.getAbsolutePath();
+				Log.d(TAG, "Exporting file to: " + exportPath);
+
+				if (mExternalStorageWriteable == false) {
+					mErrDialogText = getString(R.string.error_sd_readonly);
+					showDialog(DIALOG_ERROR);
+					return;
+				}
+
+				File exportFile = new File(exportPath, mOpenFileName);
+
+				if (exportFile.exists()) {
+					// Error dialog
+					mErrDialogText = String.format(
+							getString(R.string.error_file_exists),
+							exportFile.getName());
+					showDialog(DIALOG_ERROR);
+				} else {
+					// Launch async task to export the file
+					launchAsyncTask(ASYNC_TASK_EXPORT, exportFile, mOpenFile);
+				}
+			} else {
+				Log.e(TAG, "File chooser returned unexpected return code: "
+						+ resultCode);
+			}
+			break;
+		default:
+			Log.e(TAG, "Unknown request: " + requestCode);
+			break;
+		}
+	}
+
+	// Bail out to the volume list
+	private void exitToVolumeList() {
+		Intent intent = new Intent(this, EDVolumeListActivity.class);
+		intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+		startActivity(intent);
+		finish();
+	}
+
+	/*
+	 * Given an EncFSFile for a directory create a stack of all directories
+	 * starting from root and leading to it.
+	 */
+	private Stack<EncFSFile> getFileStackForEncFSDir(EncFSFile dir) {
+		Stack<EncFSFile> tmpStack, resultStack;
+		EncFSFile curDir;
+
+		/*
+		 * XXX: We should just compare against mVolume.getRootDir() - pending
+		 * encfs-java issue XXX
+		 */
+		if (dir.getPath().equals(EncFSVolume.ROOT_PATH)) {
+			return new Stack<EncFSFile>();
+		}
+
+		// Get the parent of the input directory
+		try {
+			curDir = mVolume.getFile(dir.getParentPath());
+		} catch (Exception e) {
+			Log.e(TAG, e.getMessage());
+			return new Stack<EncFSFile>();
+		}
+
+		// Work backwards until we hit the root directory
+		tmpStack = new Stack<EncFSFile>();
+		/*
+		 * XXX: We should just compare against mVolume.getRootDir() - pending
+		 * encfs-java issue XXX
+		 */
+		while (!curDir.getPath().equals(EncFSVolume.ROOT_PATH)) {
+			tmpStack.push(curDir);
+			try {
+				curDir = mVolume.getFile(curDir.getParentPath());
+			} catch (Exception e) {
+				Log.e(TAG, e.getMessage());
+				return new Stack<EncFSFile>();
+			}
+		}
+
+		// Add root directory to the stack
+		tmpStack.push(mVolume.getRootDir());
+
+		// Reverse tmpStack into resultStack
+		resultStack = new Stack<EncFSFile>();
+		if (!tmpStack.isEmpty()) {
+			curDir = tmpStack.pop();
+		} else {
+			curDir = null;
+		}
+		while (curDir != null) {
+			resultStack.push(curDir);
+			if (!tmpStack.isEmpty()) {
+				curDir = tmpStack.pop();
+			} else {
+				curDir = null;
+			}
+		}
+		return resultStack;
+	}
+
+	// Update the external storage state
+	private void updateExternalStorageState() {
+		String state = Environment.getExternalStorageState();
+		if (Environment.MEDIA_MOUNTED.equals(state)) {
+			mExternalStorageAvailable = mExternalStorageWriteable = true;
+		} else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+			mExternalStorageAvailable = true;
+			mExternalStorageWriteable = false;
+		} else {
+			mExternalStorageAvailable = mExternalStorageWriteable = false;
+		}
+	}
+
 	private void fill() {
 
 		EncFSFile[] childEncFSFiles = null;
@@ -636,100 +1101,102 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 	// Show a progress spinner and launch the fill task
 	private void launchFillTask() {
-		mProgDialog = new ProgressDialog(EDVolumeBrowserActivity.this);
-		mProgDialog.setTitle(getString(R.string.loading_contents));
-		mProgDialog.setCancelable(false);
-		mProgDialog.show();
-		new EDVolumeBrowserFillTask(mProgDialog).execute();
-	}
-
-	/*
-	 * Task to fill the volume browser list. This is needed because fill() can
-	 * end up doing network I/O with certain file providers and starting with
-	 * API version 13 doing so results in a NetworkOnMainThreadException.
-	 */
-	private class EDVolumeBrowserFillTask extends AsyncTask<Void, Void, Void> {
-
-		private ProgressDialog myDialog;
-
-		public EDVolumeBrowserFillTask(ProgressDialog dialog) {
-			super();
-			myDialog = dialog;
-		}
-
-		@Override
-		protected Void doInBackground(Void... arg0) {
-			fill();
-			return null;
-		}
-
-		@Override
-		protected void onPostExecute(Void result) {
-			super.onPostExecute(result);
-
-			if (myDialog.isShowing()) {
-				myDialog.dismiss();
-			}
+		if (mProgDialog == null || !mProgDialog.isShowing()) {
+			mProgDialog = new ProgressDialog(EDVolumeBrowserActivity.this);
+			mProgDialog.setTitle(getString(R.string.loading_contents));
+			mProgDialog.setCancelable(false);
+			mProgDialog.show();
+			new FillTask(mProgDialog).execute();
+		} else {
+			new FillTask(null).execute();
 		}
 	}
 
 	private void launchAsyncTask(int taskId, File fileArg, EncFSFile encFSArg) {
-		// Show progress dialog
-		mProgDialog = new ProgressDialog(EDVolumeBrowserActivity.this);
-		switch (taskId) {
-		case ASYNC_TASK_SYNC:
-			mProgDialog.setTitle(String.format(
-					getString(R.string.encrypt_dialog_title_str),
-					mOpenFile.getName()));
-			break;
-		case ASYNC_TASK_IMPORT:
-			mProgDialog.setTitle(String.format(
-					getString(R.string.import_dialog_title_str),
-					fileArg.getName()));
-			break;
-		case ASYNC_TASK_DECRYPT:
-			mProgDialog.setTitle(String.format(
-					getString(R.string.decrypt_dialog_title_str),
-					mOpenFile.getName()));
-			break;
-		case ASYNC_TASK_EXPORT:
-			mProgDialog.setTitle(String.format(
-					getString(R.string.export_dialog_title_str),
-					mOpenFile.getName()));
-			break;
-		default:
-			Log.e(TAG, "Unknown task ID: " + taskId);
-			break;
-		}
-		mProgDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-		mProgDialog.setCancelable(false);
-		mProgDialog.show();
+
+		// Show a progress bar
+		createProgressBarForTask(taskId, null);
 
 		// Launch async task
 		switch (taskId) {
 		case ASYNC_TASK_DECRYPT:
-			mAsyncTask = new EDViewFileTask(mProgDialog, encFSArg, fileArg);
+			mAsyncTask = new ViewFileTask(mProgDialog, encFSArg, fileArg);
 			break;
 		case ASYNC_TASK_IMPORT:
-			mAsyncTask = new EDImportFileTask(mProgDialog, fileArg);
+			mAsyncTask = new ImportFileTask(mProgDialog, fileArg);
 			break;
 		case ASYNC_TASK_SYNC:
-			mAsyncTask = new EDSyncFileTask(mProgDialog, fileArg, encFSArg);
+			mAsyncTask = new SyncFileTask(mProgDialog, fileArg, encFSArg);
 			break;
 		case ASYNC_TASK_EXPORT:
-			mAsyncTask = new EDExportFileTask(mProgDialog, encFSArg, fileArg);
+			mAsyncTask = new ExportFileTask(mProgDialog, encFSArg, fileArg);
 			break;
 		default:
 			Log.e(TAG, "Unknown task ID: " + taskId);
 			break;
 		}
+		mAsyncTaskId = taskId;
+		mAsyncTask.setActivity(this);
 		mAsyncTask.execute();
 	}
 
 	private void launchAsyncTask(int taskId, String strArg) {
-		// Show progress dialog
+
+		// Show a progress bar
+		createProgressBarForTask(taskId, strArg);
+
+		// Launch async task
+		switch (taskId) {
+		case ASYNC_TASK_RENAME:
+			mAsyncTask = new MetadataOpTask(mProgDialog,
+					MetadataOpTask.RENAME_FILE, strArg);
+			break;
+		case ASYNC_TASK_DELETE:
+			mAsyncTask = new MetadataOpTask(mProgDialog,
+					MetadataOpTask.DELETE_FILE, strArg);
+			break;
+		case ASYNC_TASK_CREATE_DIR:
+			mAsyncTask = new MetadataOpTask(mProgDialog,
+					MetadataOpTask.CREATE_DIR, strArg);
+			break;
+		default:
+			Log.e(TAG, "Unknown task ID: " + taskId);
+			break;
+		}
+		mAsyncTaskId = taskId;
+		mAsyncTask.setActivity(this);
+		mAsyncTask.execute();
+	}
+
+	// Create and show a progress dialog for the requested task ID
+	private void createProgressBarForTask(int taskId, String strArg) {
 		mProgDialog = new ProgressDialog(EDVolumeBrowserActivity.this);
 		switch (taskId) {
+		case ASYNC_TASK_SYNC:
+			mProgDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+			mProgDialog.setTitle(String
+					.format(getString(R.string.encrypt_dialog_title_str),
+							mOpenFileName));
+			break;
+		case ASYNC_TASK_IMPORT:
+			mProgDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+			mProgDialog.setTitle(String.format(
+					getString(R.string.import_dialog_title_str),
+					mImportFileName));
+			break;
+		case ASYNC_TASK_DECRYPT:
+			mProgDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+			mProgDialog.setTitle(String
+					.format(getString(R.string.decrypt_dialog_title_str),
+							mOpenFileName));
+			break;
+		case ASYNC_TASK_EXPORT:
+			mProgDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+			mProgDialog
+					.setTitle(String.format(
+							getString(R.string.export_dialog_title_str),
+							mOpenFileName));
+			break;
 		case ASYNC_TASK_RENAME:
 			mProgDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
 			mProgDialog.setTitle(String.format(
@@ -746,173 +1213,25 @@ public class EDVolumeBrowserActivity extends ListActivity {
 			mProgDialog.setTitle(String.format(
 					getString(R.string.mkdir_dialog_title_str), strArg));
 			break;
+		case ASYNC_TASK_PASTE:
+			mProgDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+			if (mPasteMode == PASTE_OP_COPY) {
+				mProgDialog.setTitle(getString(R.string.copy_dialog_title_str));
+			} else {
+				mProgDialog.setTitle(getString(R.string.cut_dialog_title_str));
+			}
+			break;
 		default:
 			Log.e(TAG, "Unknown task ID: " + taskId);
 			break;
 		}
-
 		mProgDialog.setCancelable(false);
 		mProgDialog.show();
-
-		// Launch async task
-		switch (taskId) {
-		case ASYNC_TASK_RENAME:
-			mAsyncTask = new EDMetadataOpTask(mProgDialog,
-					EDMetadataOpTask.RENAME_FILE, strArg);
-			break;
-		case ASYNC_TASK_DELETE:
-			mAsyncTask = new EDMetadataOpTask(mProgDialog,
-					EDMetadataOpTask.DELETE_FILE, strArg);
-			break;
-		case ASYNC_TASK_CREATE_DIR:
-			mAsyncTask = new EDMetadataOpTask(mProgDialog,
-					EDMetadataOpTask.CREATE_DIR, strArg);
-			break;
-		default:
-			Log.e(TAG, "Unknown task ID: " + taskId);
-			break;
-		}
-		mAsyncTask.execute();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.ListActivity#onListItemClick(android.widget.ListView,
-	 * android.view.View, int, long)
-	 */
-	@Override
-	protected void onListItemClick(ListView l, View v, int position, long id) {
-		super.onListItemClick(l, v, position, id);
-
-		// We use position - 1 since we have an extra header
-		if (position == 0) {
-			return;
-		}
-		EDFileChooserItem selected = mAdapter.getItem(position - 1);
-
-		if (selected.isDirectory()) {
-			if (selected.getName().equals("..")) {
-				// Chdir up
-				mCurEncFSDir = mDirStack.pop();
-			} else {
-				mDirStack.push(mCurEncFSDir);
-				mCurEncFSDir = selected.getFile();
-			}
-
-			launchFillTask();
-		} else {
-			// Launch file in external application
-
-			if (mExternalStorageWriteable == false) {
-				mErrDialogText = getString(R.string.error_sd_readonly);
-				showDialog(DIALOG_ERROR);
-				return;
-			}
-
-			// Create sdcard dir if it doesn't exist
-			File encDroidDir = new File(
-					Environment.getExternalStorageDirectory(),
-					ENCDROID_SD_DIR_NAME);
-			if (!encDroidDir.exists()) {
-				encDroidDir.mkdir();
-			}
-
-			mOpenFile = selected.getFile();
-			File dstFile = new File(encDroidDir, mOpenFile.getName());
-
-			// Launch async task to decrypt the file
-			launchAsyncTask(ASYNC_TASK_DECRYPT, dstFile, mOpenFile);
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onContextItemSelected(android.view.MenuItem)
-	 */
-	@Override
-	public boolean onContextItemSelected(MenuItem item) {
-		AdapterContextMenuInfo info = (AdapterContextMenuInfo) item
-				.getMenuInfo();
-		switch (item.getItemId()) {
-		case R.id.volume_browser_menu_rename:
-			mSelectedFile = mAdapter.getItem((int) info.id);
-			showDialog(DIALOG_FILE_RENAME);
-			return true;
-		case R.id.volume_browser_menu_delete:
-			mSelectedFile = mAdapter.getItem((int) info.id);
-			showDialog(DIALOG_FILE_DELETE);
-			return true;
-		case R.id.volume_browser_menu_cut:
-			mSelectedFile = mAdapter.getItem((int) info.id);
-			mPasteFile = mSelectedFile.getFile();
-			mPasteMode = PASTE_OP_CUT;
-
-			if (mApp.isActionBarAvailable()) {
-				mActionBar.invalidateOptionsMenu(this);
-			}
-
-			// Show toast
-			Toast.makeText(
-					getApplicationContext(),
-					String.format(getString(R.string.toast_cut_file),
-							mPasteFile.getName()), Toast.LENGTH_SHORT).show();
-
-			return true;
-		case R.id.volume_browser_menu_copy:
-			mSelectedFile = mAdapter.getItem((int) info.id);
-			mPasteFile = mSelectedFile.getFile();
-			mPasteMode = PASTE_OP_COPY;
-
-			if (mApp.isActionBarAvailable()) {
-				mActionBar.invalidateOptionsMenu(this);
-			}
-
-			// Show toast
-			Toast.makeText(
-					getApplicationContext(),
-					String.format(getString(R.string.toast_copy_file),
-							mPasteFile.getName()), Toast.LENGTH_SHORT).show();
-
-			return true;
-		case R.id.volume_browser_menu_export:
-			mSelectedFile = mAdapter.getItem((int) info.id);
-			mOpenFile = mSelectedFile.getFile();
-
-			Intent startFileExport = new Intent(this,
-					EDFileChooserActivity.class);
-
-			Bundle exportFileParams = new Bundle();
-			exportFileParams.putInt(EDFileChooserActivity.MODE_KEY,
-					EDFileChooserActivity.EXPORT_FILE_MODE);
-			exportFileParams.putString(EDFileChooserActivity.EXPORT_FILE_KEY,
-					mSelectedFile.getName());
-			startFileExport.putExtras(exportFileParams);
-
-			startActivityForResult(startFileExport, EXPORT_FILE_REQUEST);
-			return true;
-		default:
-			return super.onContextItemSelected(item);
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onCreateContextMenu(android.view.ContextMenu,
-	 * android.view.View, android.view.ContextMenu.ContextMenuInfo)
-	 */
-	@Override
-	public void onCreateContextMenu(ContextMenu menu, View v,
-			ContextMenuInfo menuInfo) {
-		super.onCreateContextMenu(menu, v, menuInfo);
-		MenuInflater inflater = getMenuInflater();
-		inflater.inflate(R.menu.volume_browser_context, menu);
+		mSavedProgBarStrArg = strArg;
 	}
 
 	private boolean copyStreams(InputStream is, OutputStream os,
-			ProgressDialog dialog) {
+			EDAsyncTask<Void, Void, Boolean> task) {
 		try {
 			byte[] buf = new byte[8192];
 			int bytesRead = 0;
@@ -922,8 +1241,8 @@ public class EDVolumeBrowserActivity extends ListActivity {
 					while (bytesRead >= 0) {
 						os.write(buf, 0, bytesRead);
 						bytesRead = is.read(buf);
-						if (dialog != null) {
-							dialog.incrementProgressBy(8192);
+						if (task != null) {
+							task.incrementProgressBy(8192);
 						}
 					}
 				} finally {
@@ -942,7 +1261,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	}
 
 	private boolean exportFile(EncFSFile srcFile, File dstFile,
-			ProgressDialog dialog) {
+			EDAsyncTask<Void, Void, Boolean> task) {
 		EncFSFileInputStream efis = null;
 		try {
 			efis = new EncFSFileInputStream(srcFile);
@@ -966,12 +1285,12 @@ public class EDVolumeBrowserActivity extends ListActivity {
 			return false;
 		}
 
-		return copyStreams(efis, fos, dialog);
+		return copyStreams(efis, fos, task);
 	}
 
 	// Export all files/dirs under the EncFS dir to the given dir
 	private boolean recursiveExport(EncFSFile srcDir, File dstDir,
-			ProgressDialog dialog) {
+			EDAsyncTask<Void, Void, Boolean> task) {
 		try {
 			for (EncFSFile file : srcDir.listFiles()) {
 
@@ -979,9 +1298,9 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 				if (file.isDirectory()) { // Directory
 					if (dstFile.mkdir()) {
-						dialog.incrementProgressBy(1);
+						task.incrementProgressBy(1);
 						// Export all files/folders under this dir
-						if (recursiveExport(file, dstFile, dialog) == false) {
+						if (recursiveExport(file, dstFile, task) == false) {
 							return false;
 						}
 					} else {
@@ -994,38 +1313,155 @@ public class EDVolumeBrowserActivity extends ListActivity {
 					if (exportFile(file, dstFile, null) == false) {
 						return false;
 					}
-					dialog.incrementProgressBy(1);
+					task.incrementProgressBy(1);
 				}
 			}
 		} catch (Exception e) {
-			Log.e(TAG, e.getMessage());
+			Log.e(TAG, e.toString());
+			e.printStackTrace();
 			mErrDialogText = e.getMessage();
 			return false;
 		}
 		return true;
 	}
 
-	private class EDExportFileTask extends AsyncTask<Void, Void, Boolean> {
+	private boolean importFile(File srcFile, EncFSFile dstFile,
+			EDAsyncTask<Void, Void, Boolean> task) {
+		FileInputStream fis = null;
+		try {
+			fis = new FileInputStream(srcFile);
+		} catch (FileNotFoundException e) {
+			Log.e(TAG, e.getMessage());
+			mErrDialogText = e.getMessage();
+			return false;
+		}
 
-		// The progress dialog for this task
+		EncFSFileOutputStream efos = null;
+		try {
+			efos = new EncFSFileOutputStream(dstFile, srcFile.length());
+		} catch (Exception e) {
+			Log.e(TAG, e.getMessage());
+			mErrDialogText = e.getMessage();
+			try {
+				fis.close();
+			} catch (IOException ioe) {
+				mErrDialogText += ioe.getMessage();
+			}
+			return false;
+		}
+
+		return copyStreams(fis, efos, task);
+	}
+
+	// Count files and directories under the given file
+	private int countFiles(File file) {
+		if (file.isDirectory()) {
+			int dirCount = 1;
+			for (File subFile : file.listFiles()) {
+				dirCount += countFiles(subFile);
+			}
+			return dirCount;
+		} else {
+			return 1;
+		}
+	}
+
+	// Import all files/dirs under the given file to the given EncFS dir
+	private boolean recursiveImport(File srcDir, EncFSFile dstDir,
+			EDAsyncTask<Void, Void, Boolean> task) {
+		for (File file : srcDir.listFiles()) {
+
+			String dstPath = EncFSVolume.combinePath(dstDir, file.getName());
+
+			try {
+				if (file.isDirectory()) { // Directory
+					if (mVolume.makeDir(dstPath)) {
+						task.incrementProgressBy(1);
+						// Import all files/folders under this dir
+						if (recursiveImport(file, mVolume.getFile(dstPath),
+								task) == false) {
+							return false;
+						}
+					} else {
+						mErrDialogText = String.format(
+								getString(R.string.error_mkdir_fail), dstPath);
+						return false;
+					}
+				} else { // Import an individual file
+					if (importFile(file, mVolume.createFile(dstPath), null) == false) {
+						return false;
+					}
+					task.incrementProgressBy(1);
+				}
+			} catch (Exception e) {
+				Log.e(TAG, e.getMessage());
+				mErrDialogText = e.getMessage();
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/*
+	 * Task to fill the volume browser list. This is needed because fill() can
+	 * end up doing network I/O with certain file providers and starting with
+	 * API version 13 doing so results in a NetworkOnMainThreadException.
+	 */
+	private class FillTask extends AsyncTask<Void, Void, Void> {
+
 		private ProgressDialog myDialog;
 
+		public FillTask(ProgressDialog dialog) {
+			super();
+			myDialog = dialog;
+		}
+
+		@Override
+		protected Void doInBackground(Void... arg0) {
+			fill();
+			return null;
+		}
+
+		@Override
+		protected void onPostExecute(Void result) {
+			super.onPostExecute(result);
+
+			if (myDialog != null && myDialog.isShowing()) {
+				myDialog.dismiss();
+			}
+		}
+	}
+
+	private class ExportFileTask extends EDAsyncTask<Void, Void, Boolean> {
 		// Source file
 		private EncFSFile srcFile;
 
 		// Destination file
 		private File dstFile;
 
-		public EDExportFileTask(ProgressDialog dialog, EncFSFile srcFile,
+		public ExportFileTask(ProgressDialog dialog, EncFSFile srcFile,
 				File dstFile) {
 			super();
-			this.myDialog = dialog;
+			setProgressDialog(dialog);
 			this.srcFile = srcFile;
 			this.dstFile = dstFile;
 		}
 
 		@Override
 		protected Boolean doInBackground(Void... args) {
+			/*
+			 * If the activity gets destroyed/recreated then we need to obtain
+			 * srcFile again.
+			 */
+			if ((srcFile == null) && (mOpenFilePath != null)) {
+				try {
+					srcFile = mVolume.getFile(mOpenFilePath);
+				} catch (Exception e) {
+					Log.e(TAG, e.toString());
+					exitToVolumeList();
+				}
+			}
+
 			if (srcFile.isDirectory()) {
 				myDialog.setMax(EncFSVolume.countFiles(srcFile));
 
@@ -1039,11 +1475,11 @@ public class EDVolumeBrowserActivity extends ListActivity {
 					return false;
 				}
 
-				return recursiveExport(srcFile, dstFile, myDialog);
+				return recursiveExport(srcFile, dstFile, this);
 			} else {
 				// Use size of the file
 				myDialog.setMax((int) srcFile.getLength());
-				return exportFile(srcFile, dstFile, myDialog);
+				return exportFile(srcFile, dstFile, this);
 			}
 
 		}
@@ -1070,10 +1506,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		}
 	}
 
-	private class EDViewFileTask extends AsyncTask<Void, Void, Boolean> {
-
-		// The progress dialog for this task
-		private ProgressDialog myDialog;
+	private class ViewFileTask extends EDAsyncTask<Void, Void, Boolean> {
 
 		// Source file
 		private EncFSFile srcFile;
@@ -1081,10 +1514,10 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		// Destination file
 		private File dstFile;
 
-		public EDViewFileTask(ProgressDialog dialog, EncFSFile srcFile,
+		public ViewFileTask(ProgressDialog dialog, EncFSFile srcFile,
 				File dstFile) {
 			super();
-			this.myDialog = dialog;
+			setProgressDialog(dialog);
 			this.srcFile = srcFile;
 			this.dstFile = dstFile;
 
@@ -1094,7 +1527,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 		@Override
 		protected Boolean doInBackground(Void... args) {
-			return exportFile(srcFile, dstFile, myDialog);
+			return exportFile(srcFile, dstFile, this);
 		}
 
 		// Run after the task is complete
@@ -1158,38 +1591,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		}
 	}
 
-	private boolean importFile(File srcFile, EncFSFile dstFile,
-			ProgressDialog dialog) {
-		FileInputStream fis = null;
-		try {
-			fis = new FileInputStream(srcFile);
-		} catch (FileNotFoundException e) {
-			Log.e(TAG, e.getMessage());
-			mErrDialogText = e.getMessage();
-			return false;
-		}
-
-		EncFSFileOutputStream efos = null;
-		try {
-			efos = new EncFSFileOutputStream(dstFile, srcFile.length());
-		} catch (Exception e) {
-			Log.e(TAG, e.getMessage());
-			mErrDialogText = e.getMessage();
-			try {
-				fis.close();
-			} catch (IOException ioe) {
-				mErrDialogText += ioe.getMessage();
-			}
-			return false;
-		}
-
-		return copyStreams(fis, efos, dialog);
-	}
-
-	private class EDSyncFileTask extends AsyncTask<Void, Void, Boolean> {
-
-		// The progress dialog for this task
-		private ProgressDialog myDialog;
+	private class SyncFileTask extends EDAsyncTask<Void, Void, Boolean> {
 
 		// Source file
 		private File srcFile;
@@ -1197,10 +1599,10 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		// Destination file
 		private EncFSFile dstFile;
 
-		public EDSyncFileTask(ProgressDialog dialog, File srcFile,
+		public SyncFileTask(ProgressDialog dialog, File srcFile,
 				EncFSFile dstFile) {
 			super();
-			this.myDialog = dialog;
+			setProgressDialog(dialog);
 			this.srcFile = srcFile;
 			this.dstFile = dstFile;
 
@@ -1210,7 +1612,20 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 		@Override
 		protected Boolean doInBackground(Void... args) {
-			return importFile(srcFile, dstFile, myDialog);
+			/*
+			 * If the activity gets destroyed/recreated then we need to obtain
+			 * dstFile again.
+			 */
+			if ((dstFile == null) && (mOpenFilePath != null)) {
+				try {
+					dstFile = mVolume.getFile(mOpenFilePath);
+				} catch (Exception e) {
+					Log.e(TAG, e.toString());
+					exitToVolumeList();
+				}
+			}
+
+			return importFile(srcFile, dstFile, this);
 		}
 
 		// Run after the task is complete
@@ -1232,8 +1647,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 							getApplicationContext(),
 							String.format(
 									getString(R.string.toast_encrypt_file),
-									mOpenFile.getName()), Toast.LENGTH_SHORT)
-							.show();
+									mOpenFileName), Toast.LENGTH_SHORT).show();
 
 					// Refresh view to get byte size changes
 					launchFillTask();
@@ -1244,59 +1658,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		}
 	}
 
-	// Count files and directories under the given file
-	private int countFiles(File file) {
-		if (file.isDirectory()) {
-			int dirCount = 1;
-			for (File subFile : file.listFiles()) {
-				dirCount += countFiles(subFile);
-			}
-			return dirCount;
-		} else {
-			return 1;
-		}
-	}
-
-	// Import all files/dirs under the given file to the given EncFS dir
-	private boolean recursiveImport(File srcDir, EncFSFile dstDir,
-			ProgressDialog dialog) {
-		for (File file : srcDir.listFiles()) {
-
-			String dstPath = EncFSVolume.combinePath(dstDir, file.getName());
-
-			try {
-				if (file.isDirectory()) { // Directory
-					if (mVolume.makeDir(dstPath)) {
-						dialog.incrementProgressBy(1);
-						// Import all files/folders under this dir
-						if (recursiveImport(file, mVolume.getFile(dstPath),
-								dialog) == false) {
-							return false;
-						}
-					} else {
-						mErrDialogText = String.format(
-								getString(R.string.error_mkdir_fail), dstPath);
-						return false;
-					}
-				} else { // Import an individual file
-					if (importFile(file, mVolume.createFile(dstPath), null) == false) {
-						return false;
-					}
-					dialog.incrementProgressBy(1);
-				}
-			} catch (Exception e) {
-				Log.e(TAG, e.getMessage());
-				mErrDialogText = e.getMessage();
-				return false;
-			}
-		}
-		return true;
-	}
-
-	private class EDImportFileTask extends AsyncTask<Void, Void, Boolean> {
-
-		// The progress dialog for this task
-		private ProgressDialog myDialog;
+	private class ImportFileTask extends EDAsyncTask<Void, Void, Boolean> {
 
 		// Source file
 		private File srcFile;
@@ -1304,9 +1666,9 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		// Destination file
 		private EncFSFile dstFile;
 
-		public EDImportFileTask(ProgressDialog dialog, File srcFile) {
+		public ImportFileTask(ProgressDialog dialog, File srcFile) {
 			super();
-			this.myDialog = dialog;
+			setProgressDialog(dialog);
 			this.srcFile = srcFile;
 		}
 
@@ -1337,11 +1699,11 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 			if (srcFile.isDirectory()) {
 				myDialog.setMax(countFiles(srcFile));
-				return recursiveImport(srcFile, dstFile, myDialog);
+				return recursiveImport(srcFile, dstFile, this);
 			} else {
 				// Use size of the file
 				myDialog.setMax((int) srcFile.length());
-				return importFile(srcFile, dstFile, myDialog);
+				return importFile(srcFile, dstFile, this);
 			}
 
 		}
@@ -1370,14 +1732,11 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		}
 	}
 
-	private class EDPasteFileTask extends AsyncTask<Void, Void, Boolean> {
+	private class PasteFileTask extends EDAsyncTask<Void, Void, Boolean> {
 
-		// The progress dialog for this task
-		private ProgressDialog myDialog;
-
-		public EDPasteFileTask(ProgressDialog dialog) {
+		public PasteFileTask(ProgressDialog dialog) {
 			super();
-			this.myDialog = dialog;
+			setProgressDialog(dialog);
 		}
 
 		@Override
@@ -1386,10 +1745,9 @@ public class EDVolumeBrowserActivity extends ListActivity {
 			try {
 				boolean result;
 				if (mPasteMode == PASTE_OP_CUT) {
-					result = mVolume.movePath(mPasteFile.getPath(), EncFSVolume
-							.combinePath(mCurEncFSDir, mPasteFile),
-							new EDProgressListener(myDialog,
-									EDVolumeBrowserActivity.this));
+					result = mVolume.movePath(mPasteFile.getPath(),
+							EncFSVolume.combinePath(mCurEncFSDir, mPasteFile),
+							new EDProgressListener(this));
 				} else {
 					// If destination path exists, use a duplicate name
 					String combinedPath = EncFSVolume.combinePath(mCurEncFSDir,
@@ -1405,13 +1763,11 @@ public class EDVolumeBrowserActivity extends ListActivity {
 						} while (mVolume.pathExists(combinedPath));
 
 						result = mVolume.copyPath(mPasteFile.getPath(),
-								combinedPath, new EDProgressListener(myDialog,
-										EDVolumeBrowserActivity.this));
+								combinedPath, new EDProgressListener(this));
 					} else {
-						result = mVolume
-								.copyPath(mPasteFile.getPath(), mCurEncFSDir
-										.getPath(), new EDProgressListener(
-										myDialog, EDVolumeBrowserActivity.this));
+						result = mVolume.copyPath(mPasteFile.getPath(),
+								mCurEncFSDir.getPath(), new EDProgressListener(
+										this));
 					}
 				}
 
@@ -1450,11 +1806,12 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				myDialog.dismiss();
 			}
 
-			mPasteFile = null;
-			mPasteMode = PASTE_OP_NONE;
+			EDVolumeBrowserActivity myActivity = (EDVolumeBrowserActivity) getActivity();
+			myActivity.mPasteFile = null;
+			myActivity.mPasteMode = PASTE_OP_NONE;
 
 			if (mApp.isActionBarAvailable()) {
-				mActionBar.invalidateOptionsMenu(EDVolumeBrowserActivity.this);
+				myActivity.mActionBar.invalidateOptionsMenu(myActivity);
 			}
 
 			if (!isCancelled()) {
@@ -1468,15 +1825,12 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		}
 	}
 
-	private class EDMetadataOpTask extends AsyncTask<Void, Void, Boolean> {
+	private class MetadataOpTask extends EDAsyncTask<Void, Void, Boolean> {
 
 		// Valid modes for the task
 		public static final int DELETE_FILE = 0;
 		public static final int RENAME_FILE = 1;
 		public static final int CREATE_DIR = 2;
-
-		// The progress dialog for this task
-		private ProgressDialog myDialog;
 
 		// mode for the current task
 		private int mode;
@@ -1484,9 +1838,9 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		// String argument for the task
 		private String strArg;
 
-		public EDMetadataOpTask(ProgressDialog dialog, int mode, String strArg) {
+		public MetadataOpTask(ProgressDialog dialog, int mode, String strArg) {
 			super();
-			this.myDialog = dialog;
+			setProgressDialog(dialog);
 			this.mode = mode;
 			this.strArg = strArg;
 		}
@@ -1498,8 +1852,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				try {
 					// boolean result = mSelectedFile.getFile().delete();
 					boolean result = mVolume.deletePath(mSelectedFile.getFile()
-							.getPath(), true, new EDProgressListener(myDialog,
-							EDVolumeBrowserActivity.this));
+							.getPath(), true, new EDProgressListener(this));
 
 					if (result == false) {
 						mErrDialogText = String.format(
@@ -1525,10 +1878,10 @@ public class EDVolumeBrowserActivity extends ListActivity {
 						return false;
 					}
 
-					boolean result = mVolume.movePath(EncFSVolume.combinePath(
-							mCurEncFSDir, mSelectedFile.getName()), dstPath,
-							new EDProgressListener(myDialog,
-									EDVolumeBrowserActivity.this));
+					boolean result = mVolume.movePath(
+							EncFSVolume.combinePath(mCurEncFSDir,
+									mSelectedFile.getName()), dstPath,
+							new EDProgressListener(this));
 
 					if (result == false) {
 						mErrDialogText = String.format(
@@ -1583,94 +1936,58 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onActivityResult(int, int,
-	 * android.content.Intent)
-	 */
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		super.onActivityResult(requestCode, resultCode, data);
+	private class ActivityRestoreTask extends EDAsyncTask<Void, Void, Boolean> {
 
-		switch (requestCode) {
-		case VIEW_FILE_REQUEST:
-			// Don't need to watch any more
-			mFileObserver.stopWatching();
+		// Saved instance state to restore from
+		private Bundle savedInstanceState;
 
-			File dstFile = new File(mFileObserver.getPath());
+		public ActivityRestoreTask(ProgressDialog dialog,
+				Bundle savedInstanceState) {
+			super();
+			this.savedInstanceState = savedInstanceState;
+			setProgressDialog(dialog);
+		}
 
-			// If the file was modified we need to sync it back
-			if (mFileObserver.wasModified()) {
-				// Sync file contents
-				try {
-					launchAsyncTask(ASYNC_TASK_SYNC, dstFile, mOpenFile);
-				} catch (Exception e) {
-					mErrDialogText = e.getMessage();
-					showDialog(DIALOG_ERROR);
-				}
-			} else {
-				// File not modified, delete from SD
-				dstFile.delete();
-			}
-
-			// Clean up reference to the file observer
-			mFileObserver = null;
-
-			break;
-		case PICK_FILE_REQUEST:
-			if (resultCode == Activity.RESULT_OK) {
-				String result = data.getExtras().getString(
-						EDFileChooserActivity.RESULT_KEY);
-				String importPath = new File(
-						Environment.getExternalStorageDirectory(), result)
-						.getAbsolutePath();
-				Log.d(TAG, "Importing file: " + importPath);
-
-				File importFile = new File(importPath);
-
-				// Launch async task to complete importing
-				launchAsyncTask(ASYNC_TASK_IMPORT, importFile, null);
-			} else {
-				Log.d(TAG, "File chooser returned unexpected return code: "
-						+ resultCode);
-			}
-			break;
-		case EXPORT_FILE_REQUEST:
-			if (resultCode == Activity.RESULT_OK) {
-				String result = data.getExtras().getString(
-						EDFileChooserActivity.RESULT_KEY);
-				String exportPath = new File(
-						Environment.getExternalStorageDirectory(), result)
-						.getAbsolutePath();
-				Log.d(TAG, "Exporting file to: " + exportPath);
-
-				if (mExternalStorageWriteable == false) {
-					mErrDialogText = getString(R.string.error_sd_readonly);
-					showDialog(DIALOG_ERROR);
-					return;
-				}
-
-				File exportFile = new File(exportPath, mOpenFile.getName());
-
-				if (exportFile.exists()) {
-					// Error dialog
-					mErrDialogText = String.format(
-							getString(R.string.error_file_exists),
-							exportFile.getName());
-					showDialog(DIALOG_ERROR);
+		@Override
+		protected Boolean doInBackground(Void... arg0) {
+			// Activity restored after being killed
+			try {
+				// XXX: volume.getFile("/") should return volume.getRootDir()
+				if (mSavedCurDirPath.equals(EncFSVolume.ROOT_PATH)) {
+					mCurEncFSDir = mVolume.getRootDir();
 				} else {
-					// Launch async task to export the file
-					launchAsyncTask(ASYNC_TASK_EXPORT, exportFile, mOpenFile);
+					mCurEncFSDir = mVolume.getFile(savedInstanceState
+							.getString(SAVED_CUR_DIR_PATH_KEY));
 				}
-			} else {
-				Log.e(TAG, "File chooser returned unexpected return code: "
-						+ resultCode);
+			} catch (Exception e) {
+				Log.e(TAG, e.getMessage());
+				exitToVolumeList();
 			}
-			break;
-		default:
-			Log.e(TAG, "Unknown request: " + requestCode);
-			break;
+			mDirStack = getFileStackForEncFSDir(mCurEncFSDir);
+
+			// Restore paste state
+			if (mPasteMode != PASTE_OP_NONE) {
+				try {
+					mPasteFile = mVolume.getFile(savedInstanceState
+							.getString(SAVED_PASTE_FILE_PATH_KEY));
+				} catch (Exception e) {
+					Log.e(TAG, e.getMessage());
+					exitToVolumeList();
+				}
+			}
+
+			return true;
+		}
+
+		@Override
+		protected void onPostExecute(Boolean result) {
+			super.onPostExecute(result);
+
+			if (myDialog != null && myDialog.isShowing()) {
+				myDialog.dismiss();
+			}
+
+			launchFillTask();
 		}
 	}
 

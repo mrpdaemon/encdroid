@@ -21,45 +21,47 @@ package org.mrpdaemon.android.encdroid;
 import org.mrpdaemon.sec.encfs.EncFSProgressListener;
 
 import android.app.Activity;
-import android.app.ProgressDialog;
 
 public class EDProgressListener extends EncFSProgressListener {
 
-	// Progress dialog to update
-	private ProgressDialog myDialog;
-	
-	// Activity for running UI tasks
-	private Activity myActivity;
+	// Task that owns this progress listener
+	private EDAsyncTask<Void, Void, Boolean> myTask;
 
-	public EDProgressListener(ProgressDialog dialog, Activity activity) {
-		myDialog = dialog;
-		myActivity = activity;
+	public EDProgressListener(EDAsyncTask<Void, Void, Boolean> task) {
+		myTask = task;
 	}
 
 	@Override
 	public void handleEvent(int eventType) {
+
+		// Get the current activity that owns the task
+		Activity activity = myTask.getActivity();
+		if (activity == null) {
+			return;
+		}
+
 		switch (eventType) {
 		case EDProgressListener.FILES_COUNTED_EVENT:
-			myActivity.runOnUiThread(new Runnable() {
+			activity.runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					myDialog.setMax(getNumFiles());
+					myTask.setMaxProgress(getNumFiles());
 				}
 			});
 			break;
 		case EDProgressListener.NEW_FILE_EVENT:
-			myActivity.runOnUiThread(new Runnable() {
+			activity.runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					myDialog.setMessage(getCurrentFile());
+					myTask.setProgressMessage(getCurrentFile());
 				}
 			});
 			break;
 		case EDProgressListener.FILE_PROCESS_EVENT:
-			myActivity.runOnUiThread(new Runnable() {
+			activity.runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					myDialog.incrementProgressBy(1);
+					myTask.incrementProgressBy(1);
 				}
 			});
 			break;
