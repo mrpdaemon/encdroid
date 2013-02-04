@@ -152,6 +152,9 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	// Async task ID
 	private int mAsyncTaskId = -1;
 
+	// Fill task object
+	private AsyncTask<Void, Void, Void> mFillTask = null;
+
 	// File observer
 	private EDFileObserver mFileObserver;
 
@@ -425,6 +428,10 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		super.onDestroy();
 		if (mExternalStorageAvailable) {
 			unregisterReceiver(mExternalStorageReceiver);
+		}
+		if (mFillTask != null
+				&& mFillTask.getStatus() == AsyncTask.Status.RUNNING) {
+			mFillTask.cancel(true);
 		}
 	}
 
@@ -1106,9 +1113,11 @@ public class EDVolumeBrowserActivity extends ListActivity {
 			mProgDialog.setTitle(getString(R.string.loading_contents));
 			mProgDialog.setCancelable(false);
 			mProgDialog.show();
-			new FillTask(mProgDialog).execute();
+			mFillTask = new FillTask(mProgDialog);
+			mFillTask.execute();
 		} else {
-			new FillTask(null).execute();
+			mFillTask = new FillTask(null);
+			mFillTask.execute();
 		}
 	}
 
@@ -1426,8 +1435,10 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		protected void onPostExecute(Void result) {
 			super.onPostExecute(result);
 
-			if (myDialog != null && myDialog.isShowing()) {
-				myDialog.dismiss();
+			if (!isCancelled()) {
+				if (myDialog != null && myDialog.isShowing()) {
+					myDialog.dismiss();
+				}
 			}
 		}
 	}
