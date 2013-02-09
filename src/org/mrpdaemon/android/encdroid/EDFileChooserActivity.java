@@ -359,7 +359,7 @@ public class EDFileChooserActivity extends ListActivity {
 		try {
 			childFiles = mFileProvider.listFiles(mCurrentDir);
 		} catch (IOException e) {
-			Log.e(TAG, "Failed to list files: " + e.getMessage());
+			EDLogger.logException(TAG, e);
 			return false;
 		}
 

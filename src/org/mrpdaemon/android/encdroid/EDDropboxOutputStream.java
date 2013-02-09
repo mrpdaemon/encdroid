@@ -68,9 +68,13 @@ public class EDDropboxOutputStream extends OutputStream {
 				try {
 					api.putFileOverwrite(dstPath, pipeDropbox, fileLength, null);
 				} catch (DropboxException e) {
-					Log.e(TAG, "putFileOverwrite failed: " + e.getMessage());
+					EDLogger.logException(TAG, e);
 					// Propagate the error
-					EDDropboxOutputStream.this.fail(e.getMessage());
+					if (e.getMessage() != null) {
+						EDDropboxOutputStream.this.fail(e.getMessage());
+					} else {
+						EDDropboxOutputStream.this.fail(e.toString());
+					}
 				}
 			}
 		});

@@ -966,7 +966,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			curDir = mVolume.getFile(dir.getParentPath());
 		} catch (Exception e) {
-			Log.e(TAG, e.getMessage());
+			EDLogger.logException(TAG, e);
 			return new Stack<EncFSFile>();
 		}
 
@@ -981,7 +981,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 			try {
 				curDir = mVolume.getFile(curDir.getParentPath());
 			} catch (Exception e) {
-				Log.e(TAG, e.getMessage());
+				EDLogger.logException(TAG, e);
 				return new Stack<EncFSFile>();
 			}
 		}
@@ -1027,7 +1027,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			childEncFSFiles = mCurEncFSDir.listFiles();
 		} catch (IOException e) {
-			Log.e(TAG, e.getMessage());
+			EDLogger.logException(TAG, e);
 			mErrDialogText = "Unable to list files: " + e.getMessage();
 			showDialog(DIALOG_ERROR);
 			return;
@@ -1261,7 +1261,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				os.close();
 			}
 		} catch (IOException e) {
-			Log.e(TAG, e.getMessage());
+			EDLogger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			return false;
 		}
@@ -1275,7 +1275,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			efis = new EncFSFileInputStream(srcFile);
 		} catch (Exception e) {
-			Log.e(TAG, e.getMessage());
+			EDLogger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			return false;
 		}
@@ -1284,7 +1284,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			fos = new FileOutputStream(dstFile);
 		} catch (FileNotFoundException e) {
-			Log.e(TAG, e.getMessage());
+			EDLogger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			try {
 				efis.close();
@@ -1326,8 +1326,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				}
 			}
 		} catch (Exception e) {
-			Log.e(TAG, e.toString());
-			e.printStackTrace();
+			EDLogger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			return false;
 		}
@@ -1340,7 +1339,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			fis = new FileInputStream(srcFile);
 		} catch (FileNotFoundException e) {
-			Log.e(TAG, e.getMessage());
+			EDLogger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			return false;
 		}
@@ -1349,7 +1348,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			efos = new EncFSFileOutputStream(dstFile, srcFile.length());
 		} catch (Exception e) {
-			Log.e(TAG, e.getMessage());
+			EDLogger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			try {
 				fis.close();
@@ -1403,7 +1402,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 					task.incrementProgressBy(1);
 				}
 			} catch (Exception e) {
-				Log.e(TAG, e.getMessage());
+				EDLogger.logException(TAG, e);
 				mErrDialogText = e.getMessage();
 				return false;
 			}
@@ -1468,7 +1467,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				try {
 					srcFile = mVolume.getFile(mOpenFilePath);
 				} catch (Exception e) {
-					Log.e(TAG, e.toString());
+					EDLogger.logException(TAG, e);
 					exitToVolumeList();
 				}
 			}
@@ -1631,7 +1630,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				try {
 					dstFile = mVolume.getFile(mOpenFilePath);
 				} catch (Exception e) {
-					Log.e(TAG, e.toString());
+					EDLogger.logException(TAG, e);
 					exitToVolumeList();
 				}
 			}
@@ -1703,7 +1702,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 					dstFile = mVolume.createFile(dstPath);
 				}
 			} catch (Exception e) {
-				Log.e(TAG, e.getMessage());
+				EDLogger.logException(TAG, e);
 				mErrDialogText = e.getMessage();
 				return false;
 			}
@@ -1799,7 +1798,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				if (e.getMessage() == null) {
 					mErrDialogText = getString(R.string.paste_fail);
 				} else {
-					Log.e(TAG, e.getMessage());
+					EDLogger.logException(TAG, e);
 					mErrDialogText = e.getMessage();
 				}
 				return false;
@@ -1872,7 +1871,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 						return false;
 					}
 				} catch (Exception e) {
-					Log.e(TAG, e.getMessage());
+					EDLogger.logException(TAG, e);
 					mErrDialogText = e.getMessage();
 					return false;
 				}
@@ -1901,7 +1900,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 						return false;
 					}
 				} catch (Exception e) {
-					Log.e(TAG, e.getMessage());
+					EDLogger.logException(TAG, e);
 					mErrDialogText = e.getMessage();
 					return false;
 				}
@@ -1917,7 +1916,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 						return false;
 					}
 				} catch (Exception e) {
-					Log.e(TAG, e.getMessage());
+					EDLogger.logException(TAG, e);
 					mErrDialogText = e.getMessage();
 					return false;
 				}
@@ -1971,7 +1970,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 							.getString(SAVED_CUR_DIR_PATH_KEY));
 				}
 			} catch (Exception e) {
-				Log.e(TAG, e.getMessage());
+				EDLogger.logException(TAG, e);
 				exitToVolumeList();
 			}
 			mDirStack = getFileStackForEncFSDir(mCurEncFSDir);
@@ -1982,7 +1981,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 					mPasteFile = mVolume.getFile(savedInstanceState
 							.getString(SAVED_PASTE_FILE_PATH_KEY));
 				} catch (Exception e) {
-					Log.e(TAG, e.getMessage());
+					EDLogger.logException(TAG, e);
 					exitToVolumeList();
 				}
 			}

@@ -966,7 +966,7 @@ public class EDVolumeListActivity extends ListActivity {
 					((EDVolumeListActivity) getActivity()).mErrDialogText = getString(R.string.incorrect_pwd_str);
 				}
 			} catch (Exception e) {
-				Log.e(TAG, e.getMessage());
+				EDLogger.logException(TAG, e);
 				((EDVolumeListActivity) getActivity()).mErrDialogText = e
 						.getMessage();
 			}

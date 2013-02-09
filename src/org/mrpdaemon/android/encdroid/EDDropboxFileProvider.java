@@ -68,6 +68,15 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 		}
 	}
 
+	private void handleDropboxException(DropboxException e) throws IOException {
+		EDLogger.logException(TAG, e);
+		if (e.getMessage() != null) {
+			throw new IOException(e.getMessage());
+		} else {
+			throw new IOException(e.toString());
+		}
+	}
+
 	@Override
 	public boolean copy(String srcPath, String dstPath) throws IOException {
 
@@ -84,8 +93,7 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 		try {
 			api.copy(absPath(srcPath), absPath(dstPath));
 		} catch (DropboxException e) {
-			Log.e(TAG, e.toString() + "\n" + Log.getStackTraceString(e));
-			throw new IOException(e.getMessage());
+			handleDropboxException(e);
 		}
 
 		return true;
@@ -99,8 +107,8 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 			entry = api.putFileOverwrite(absPath(path), new FileInputStream(
 					"/dev/zero"), 0, null);
 		} catch (DropboxException e) {
-			Log.e(TAG, e.toString() + "\n" + Log.getStackTraceString(e));
-			throw new IOException(e.getMessage());
+			handleDropboxException(e);
+			return null;
 		}
 
 		if (entry != null) {
@@ -115,8 +123,7 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 		try {
 			api.delete(absPath(path));
 		} catch (DropboxException e) {
-			Log.e(TAG, e.toString() + "\n" + Log.getStackTraceString(e));
-			throw new IOException(e.getMessage());
+			handleDropboxException(e);
 		}
 
 		return true;
@@ -138,12 +145,12 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 			if (e.error == DropboxServerException._404_NOT_FOUND) {
 				return false;
 			} else {
-				Log.e(TAG, e.toString() + "\n" + Log.getStackTraceString(e));
-				throw new IOException(e.getMessage());
+				handleDropboxException(e);
+				return false;
 			}
 		} catch (DropboxException e) {
-			Log.e(TAG, e.toString() + "\n" + Log.getStackTraceString(e));
-			throw new IOException(e.getMessage());
+			handleDropboxException(e);
+			return false;
 		}
 	}
 
@@ -177,8 +184,8 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 
 			return null;
 		} catch (DropboxException e) {
-			Log.e(TAG, e.toString() + "\n" + Log.getStackTraceString(e));
-			throw new IOException(e.getMessage());
+			handleDropboxException(e);
+			return null;
 		}
 	}
 
@@ -198,8 +205,8 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 			Entry entry = api.metadata(absPath(path), 1, null, false, null);
 			return entry.isDir;
 		} catch (DropboxException e) {
-			Log.e(TAG, e.toString() + "\n" + Log.getStackTraceString(e));
-			throw new IOException(e.getMessage());
+			handleDropboxException(e);
+			return false;
 		}
 	}
 
@@ -223,8 +230,8 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 
 			return list;
 		} catch (DropboxException e) {
-			Log.e(TAG, e.toString() + "\n" + Log.getStackTraceString(e));
-			throw new IOException(e.getMessage());
+			handleDropboxException(e);
+			return null;
 		}
 	}
 
@@ -233,8 +240,7 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 		try {
 			api.createFolder(absPath(path));
 		} catch (DropboxException e) {
-			Log.e(TAG, e.toString() + "\n" + Log.getStackTraceString(e));
-			throw new IOException(e.getMessage());
+			handleDropboxException(e);
 		}
 
 		return true;
@@ -253,8 +259,7 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 		try {
 			api.move(absPath(srcPath), absPath(dstPath));
 		} catch (DropboxException e) {
-			Log.e(TAG, e.toString() + "\n" + Log.getStackTraceString(e));
-			throw new IOException(e.getMessage());
+			handleDropboxException(e);
 		}
 
 		return true;
@@ -265,8 +270,8 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 		try {
 			return api.getFileStream(absPath(path), null);
 		} catch (DropboxException e) {
-			Log.e(TAG, e.toString() + "\n" + Log.getStackTraceString(e));
-			throw new IOException(e.getMessage());
+			handleDropboxException(e);
+			return null;
 		}
 	}
 
