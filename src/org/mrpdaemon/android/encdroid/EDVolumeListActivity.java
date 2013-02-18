@@ -172,16 +172,18 @@ public class EDVolumeListActivity extends ListActivity {
 
 		if (savedInstanceState != null) {
 			// Activity being recreated
+
+			mVolPickerResult = savedInstanceState
+					.getString(SAVED_VOL_PICK_RESULT_KEY);
+			mCreateVolumeName = savedInstanceState
+					.getString(SAVED_CREATE_VOL_NAME_KEY);
+			mVolumeOp = savedInstanceState.getInt(SAVED_VOL_OP_KEY);
+			mVolumeType = savedInstanceState.getInt(SAVED_VOL_TYPE_KEY);
+
 			ActivityRestoreContext restoreContext = (ActivityRestoreContext) getLastNonConfigurationInstance();
 			if (restoreContext != null) {
 				mSelectedVolume = restoreContext.savedVolume;
 				mSelectedVolIdx = savedInstanceState.getInt(SAVED_VOL_IDX_KEY);
-				mVolPickerResult = savedInstanceState
-						.getString(SAVED_VOL_PICK_RESULT_KEY);
-				mCreateVolumeName = savedInstanceState
-						.getString(SAVED_CREATE_VOL_NAME_KEY);
-				mVolumeOp = savedInstanceState.getInt(SAVED_VOL_OP_KEY);
-				mVolumeType = savedInstanceState.getInt(SAVED_VOL_TYPE_KEY);
 
 				// Restore async task
 				mAsyncTask = restoreContext.savedTask;
@@ -362,7 +364,7 @@ public class EDVolumeListActivity extends ListActivity {
 		case DIALOG_VOL_CREATE:
 			input = (EditText) dialog.findViewById(R.id.dialog_edit_text);
 			if (input != null) {
-				if (rename) {
+				if (rename && mSelectedVolume != null) {
 					input.setText(mSelectedVolume.getName());
 				} else {
 					input.setText("");
@@ -417,8 +419,12 @@ public class EDVolumeListActivity extends ListActivity {
 
 		switch (id) {
 		case DIALOG_VOL_PASS: // Password dialog
+			if (mSelectedVolume == null) {
+				// Can happen when restoring a killed activity
+				return null;
+			}
+			// Fall through
 		case DIALOG_VOL_CREATEPASS: // Create volume password
-
 			input = (EditText) inflater.inflate(R.layout.dialog_edit, null);
 
 			// Hide password input
@@ -490,6 +496,11 @@ public class EDVolumeListActivity extends ListActivity {
 			break;
 
 		case DIALOG_VOL_RENAME:
+			if (mSelectedVolume == null) {
+				// Can happen when restoring a killed activity
+				return null;
+			}
+			// Fall through
 		case DIALOG_VOL_CREATE:
 		case DIALOG_VOL_NAME: // Volume name dialog
 
@@ -604,6 +615,11 @@ public class EDVolumeListActivity extends ListActivity {
 			alertDialog = alertBuilder.create();
 			break;
 		case DIALOG_VOL_DELETE:
+			if (mSelectedVolume == null) {
+				// Can happen when restoring a killed activity
+				return null;
+			}
+
 			final CharSequence[] items = { getString(R.string.delete_vol_dialog_disk_str) };
 			final boolean[] states = { true };
 
