@@ -37,14 +37,13 @@ libs/ folder:
 
 ### Required Libraries
 
-Encdroid depends on the following libraries which must be placed in the libs/
-directory before building:
+Libraries required to build Encdroid are committed to this repository under
+the libs/ folder. The following notable libraries are used:
 
-* encfs-java (latest commit on git is recommended although it should build
-  fine against the last release most of the the time).
-* dropbox-android-sdk-1.5.1
-* httpmime-4.0.3
-* json_simple-1.1
+* encfs-java
+* dropbox-android-sdk
+* httpmime
+* json_simple
 
 Note that [openssl-android](https://github.com/guardianproject/openssl-android)
 is also a requirement, however this repository contains prebuilt versions of the
