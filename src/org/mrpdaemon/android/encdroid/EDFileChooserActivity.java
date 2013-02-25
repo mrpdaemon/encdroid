@@ -294,13 +294,14 @@ public class EDFileChooserActivity extends ListActivity {
 			return true;
 		case android.R.id.home:
 			Log.v(TAG, "Home icon clicked");
-			if (!mCurrentDir.equalsIgnoreCase(mFileProvider.getRootPath())) {
+			if (!mCurrentDir.equalsIgnoreCase(mFileProvider
+					.getFilesystemRootPath())) {
 
-				if (mCurrentDir.lastIndexOf(mFileProvider.getSeparator()) == 0) {
-					mCurrentDir = mFileProvider.getRootPath();
+				if (mCurrentDir.lastIndexOf("/") == 0) {
+					mCurrentDir = mFileProvider.getFilesystemRootPath();
 				} else {
-					mCurrentDir = mCurrentDir.substring(0, mCurrentDir
-							.lastIndexOf(mFileProvider.getSeparator()));
+					mCurrentDir = mCurrentDir.substring(0,
+							mCurrentDir.lastIndexOf("/"));
 				}
 
 				launchFillTask();
@@ -320,13 +321,14 @@ public class EDFileChooserActivity extends ListActivity {
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
-			if (!mCurrentDir.equalsIgnoreCase(mFileProvider.getRootPath())) {
+			if (!mCurrentDir.equalsIgnoreCase(mFileProvider
+					.getFilesystemRootPath())) {
 
-				if (mCurrentDir.lastIndexOf(mFileProvider.getSeparator()) == 0) {
-					mCurrentDir = mFileProvider.getRootPath();
+				if (mCurrentDir.lastIndexOf("/") == 0) {
+					mCurrentDir = mFileProvider.getFilesystemRootPath();
 				} else {
-					mCurrentDir = mCurrentDir.substring(0, mCurrentDir
-							.lastIndexOf(mFileProvider.getSeparator()));
+					mCurrentDir = mCurrentDir.substring(0,
+							mCurrentDir.lastIndexOf("/"));
 				}
 
 				launchFillTask();
@@ -449,14 +451,15 @@ public class EDFileChooserActivity extends ListActivity {
 		 * navigation.
 		 */
 		if ((mActionBar == null)
-				&& (!mCurrentDir.equalsIgnoreCase(mFileProvider.getRootPath()))) {
+				&& (!mCurrentDir.equalsIgnoreCase(mFileProvider
+						.getFilesystemRootPath()))) {
 			String parentPath;
 
-			if (mCurrentDir.lastIndexOf(mFileProvider.getSeparator()) == 0) {
-				parentPath = mFileProvider.getRootPath();
+			if (mCurrentDir.lastIndexOf("/") == 0) {
+				parentPath = mFileProvider.getFilesystemRootPath();
 			} else {
 				parentPath = mCurrentDir.substring(0,
-						mCurrentDir.lastIndexOf(mFileProvider.getSeparator()));
+						mCurrentDir.lastIndexOf("/"));
 			}
 
 			mCurFileList.add(0,

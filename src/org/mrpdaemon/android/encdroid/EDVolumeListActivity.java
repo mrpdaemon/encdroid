@@ -21,11 +21,12 @@ package org.mrpdaemon.android.encdroid;
 import java.io.File;
 import java.io.IOException;
 
-import org.mrpdaemon.sec.encfs.EncFSConfig;
+import org.mrpdaemon.sec.encfs.EncFSConfigFactory;
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 import org.mrpdaemon.sec.encfs.EncFSInvalidPasswordException;
 import org.mrpdaemon.sec.encfs.EncFSLocalFileProvider;
 import org.mrpdaemon.sec.encfs.EncFSVolume;
+import org.mrpdaemon.sec.encfs.EncFSVolumeBuilder;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -970,10 +971,14 @@ public class EDVolumeListActivity extends ListActivity {
 			// Unlock the volume, takes long due to PBKDF2 calculation
 			try {
 				if (cachedKey == null) {
-					volume = new EncFSVolume(fileProvider, args[1],
-							mApp.getNativePBKDF2Provider());
+					volume = new EncFSVolumeBuilder()
+							.withFileProvider(fileProvider)
+							.withPbkdf2Provider(mApp.getNativePBKDF2Provider())
+							.withPassword(args[1]).buildVolume();
 				} else {
-					volume = new EncFSVolume(fileProvider, cachedKey);
+					volume = new EncFSVolumeBuilder()
+							.withFileProvider(fileProvider)
+							.withDerivedKeyData(cachedKey).buildVolume();
 				}
 			} catch (EncFSInvalidPasswordException e) {
 				if (cachedKey != null) {
@@ -1038,7 +1043,7 @@ public class EDVolumeListActivity extends ListActivity {
 					if (cachedKey == null) {
 						// Cache key in DB if preference is enabled
 						if (mActivity.mPrefs.getBoolean("cache_key", false)) {
-							byte[] keyToCache = result.getPasswordKey();
+							byte[] keyToCache = result.getDerivedKeyData();
 							mActivity.mApp.getDbHelper().cacheKey(
 									mSelectedVolume, keyToCache);
 						}
@@ -1107,13 +1112,15 @@ public class EDVolumeListActivity extends ListActivity {
 				return false;
 			}
 
-			EncFSFileProvider volumeProvider = ((EDVolumeListActivity) getActivity())
+			EncFSFileProvider fileProvider = ((EDVolumeListActivity) getActivity())
 					.getFileProvider(volumeType, volumePath);
 
 			// Create the volume
 			try {
-				EncFSVolume.createVolume(volumeProvider, new EncFSConfig(),
-						password, mApp.getNativePBKDF2Provider());
+				new EncFSVolumeBuilder().withFileProvider(fileProvider)
+						.withConfig(EncFSConfigFactory.createDefault())
+						.withPbkdf2Provider(mApp.getNativePBKDF2Provider())
+						.withPassword(password).writeVolumeConfig();
 			} catch (Exception e) {
 				mErrDialogText = e.getMessage();
 				return false;

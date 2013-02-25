@@ -190,16 +190,6 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 	}
 
 	@Override
-	public String getRootPath() {
-		return "/";
-	}
-
-	@Override
-	public String getSeparator() {
-		return "/";
-	}
-
-	@Override
 	public boolean isDirectory(String path) throws IOException {
 		try {
 			Entry entry = api.metadata(absPath(path), 1, null, false, null);
@@ -279,6 +269,11 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 	public OutputStream openOutputStream(String path, long length)
 			throws IOException {
 		return new EDDropboxOutputStream(api, absPath(path), length);
+	}
+
+	@Override
+	public String getFilesystemRootPath() {
+		return "/";
 	}
 
 }
