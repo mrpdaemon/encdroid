@@ -1000,6 +1000,8 @@ public class EDVolumeListActivity extends ListActivity {
 		protected void onPostExecute(EncFSVolume result) {
 			super.onPostExecute(result);
 
+			final EDVolumeListActivity mActivity = (EDVolumeListActivity) getActivity();
+
 			if (myDialog != null) {
 				if (myDialog.isShowing()) {
 					myDialog.dismiss();
@@ -1014,39 +1016,37 @@ public class EDVolumeListActivity extends ListActivity {
 							Toast.LENGTH_SHORT).show();
 
 					// Invalidate cached key from DB
-					((EDVolumeListActivity) getActivity()).mApp.getDbHelper()
-							.clearKey(mSelectedVolume);
+					mActivity.mApp.getDbHelper().clearKey(mSelectedVolume);
 
 					// Kick off password dialog
-					((EDVolumeListActivity) getActivity())
-							.showDialog(DIALOG_VOL_PASS);
+					mActivity.showDialog(DIALOG_VOL_PASS);
 
 					return;
 				}
 
 				if (result != null) {
-					((EDVolumeListActivity) getActivity()).mSelectedVolume
-							.unlock(result);
+					mActivity.mSelectedVolume.unlock(result);
 
-					((EDVolumeListActivity) getActivity()).mAdapter
-							.notifyDataSetChanged();
+					// Notify list adapter change from UI thread
+					runOnUiThread(new Runnable() {
+						@Override
+						public void run() {
+							mActivity.mAdapter.notifyDataSetChanged();
+						}
+					});
 
 					if (cachedKey == null) {
 						// Cache key in DB if preference is enabled
-						if (((EDVolumeListActivity) getActivity()).mPrefs
-								.getBoolean("cache_key", false)) {
+						if (mActivity.mPrefs.getBoolean("cache_key", false)) {
 							byte[] keyToCache = result.getPasswordKey();
-							((EDVolumeListActivity) getActivity()).mApp
-									.getDbHelper().cacheKey(mSelectedVolume,
-											keyToCache);
+							mActivity.mApp.getDbHelper().cacheKey(
+									mSelectedVolume, keyToCache);
 						}
 					}
 
-					((EDVolumeListActivity) getActivity())
-							.launchVolumeBrowser(mSelectedVolIdx);
+					mActivity.launchVolumeBrowser(mSelectedVolIdx);
 				} else {
-					((EDVolumeListActivity) getActivity())
-							.showDialog(DIALOG_ERROR);
+					mActivity.showDialog(DIALOG_ERROR);
 				}
 			}
 		}
