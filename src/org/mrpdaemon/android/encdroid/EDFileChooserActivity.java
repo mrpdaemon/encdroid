@@ -33,7 +33,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
-import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -45,13 +44,18 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.ViewGroup.LayoutParams;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 public class EDFileChooserActivity extends ListActivity {
@@ -119,9 +123,6 @@ public class EDFileChooserActivity extends ListActivity {
 
 	// File name being exported
 	private String mExportFileName = null;
-
-	// Progress dialog for async progress
-	private ProgressDialog mProgDialog = null;
 
 	// Shared preferences
 	private SharedPreferences mPrefs = null;
@@ -488,11 +489,7 @@ public class EDFileChooserActivity extends ListActivity {
 
 	// Show a progress spinner and launch the fill task
 	private void launchFillTask() {
-		mProgDialog = new ProgressDialog(EDFileChooserActivity.this);
-		mProgDialog.setTitle(getString(R.string.loading_contents));
-		mProgDialog.setCancelable(false);
-		mProgDialog.show();
-		new EDFileChooserFillTask(mProgDialog).execute();
+		new EDFileChooserFillTask().execute();
 	}
 
 	/*
@@ -502,11 +499,39 @@ public class EDFileChooserActivity extends ListActivity {
 	 */
 	private class EDFileChooserFillTask extends AsyncTask<Void, Void, Boolean> {
 
-		private ProgressDialog myDialog;
+		private ProgressBar mProgBar;
+		private ListView mListView;
+		private LinearLayout mLayout;
 
-		public EDFileChooserFillTask(ProgressDialog dialog) {
+		public EDFileChooserFillTask() {
 			super();
-			myDialog = dialog;
+		}
+
+		@Override
+		protected void onPreExecute() {
+			super.onPreExecute();
+
+			// Replace the ListView with a ProgressBar
+			mProgBar = new ProgressBar(EDFileChooserActivity.this, null,
+					android.R.attr.progressBarStyleLarge);
+
+			// Set the layout to fill the screen
+			mListView = EDFileChooserActivity.this.getListView();
+			mLayout = (LinearLayout) mListView.getParent();
+			mLayout.setGravity(Gravity.CENTER);
+			mLayout.setLayoutParams(new FrameLayout.LayoutParams(
+					LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
+
+			// Set the ProgressBar in the center of the layout
+			LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+					LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+			layoutParams.gravity = Gravity.CENTER;
+			mProgBar.setLayoutParams(layoutParams);
+
+			// Replace the ListView with the ProgressBar
+			mLayout.removeView(mListView);
+			mLayout.addView(mProgBar);
+			mProgBar.setVisibility(View.VISIBLE);
 		}
 
 		@Override
@@ -518,9 +543,14 @@ public class EDFileChooserActivity extends ListActivity {
 		protected void onPostExecute(Boolean result) {
 			super.onPostExecute(result);
 
-			if (myDialog.isShowing()) {
-				myDialog.dismiss();
-			}
+			// Restore the layout parameters
+			mLayout.setLayoutParams(new FrameLayout.LayoutParams(
+					LayoutParams.FILL_PARENT, LayoutParams.WRAP_CONTENT));
+			mLayout.setGravity(Gravity.TOP);
+
+			// Remove the progress bar and replace it with the list view
+			mLayout.removeView(mProgBar);
+			mLayout.addView(mListView);
 
 			if (result == true) {
 				if (mPrefs.getBoolean("auto_import", true)) {

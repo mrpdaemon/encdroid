@@ -58,8 +58,10 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.ViewGroup.LayoutParams;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -68,6 +70,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView.OnEditorActionListener;
 import android.widget.Button;
 import android.widget.EditText;
@@ -1108,17 +1113,8 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 	// Show a progress spinner and launch the fill task
 	private void launchFillTask() {
-		if (mProgDialog == null || !mProgDialog.isShowing()) {
-			mProgDialog = new ProgressDialog(EDVolumeBrowserActivity.this);
-			mProgDialog.setTitle(getString(R.string.loading_contents));
-			mProgDialog.setCancelable(false);
-			mProgDialog.show();
-			mFillTask = new FillTask(mProgDialog);
-			mFillTask.execute();
-		} else {
-			mFillTask = new FillTask(null);
-			mFillTask.execute();
-		}
+		mFillTask = new FillTask();
+		mFillTask.execute();
 	}
 
 	private void launchAsyncTask(int taskId, File fileArg, EncFSFile encFSArg) {
@@ -1417,11 +1413,39 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	 */
 	private class FillTask extends AsyncTask<Void, Void, Void> {
 
-		private ProgressDialog myDialog;
+		private ProgressBar mProgBar;
+		private ListView mListView;
+		private LinearLayout mLayout;
 
-		public FillTask(ProgressDialog dialog) {
+		public FillTask() {
 			super();
-			myDialog = dialog;
+		}
+
+		@Override
+		protected void onPreExecute() {
+			super.onPreExecute();
+
+			// Replace the ListView with a ProgressBar
+			mProgBar = new ProgressBar(EDVolumeBrowserActivity.this, null,
+					android.R.attr.progressBarStyleLarge);
+
+			// Set the layout to fill the screen
+			mListView = EDVolumeBrowserActivity.this.getListView();
+			mLayout = (LinearLayout) mListView.getParent();
+			mLayout.setGravity(Gravity.CENTER);
+			mLayout.setLayoutParams(new FrameLayout.LayoutParams(
+					LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
+
+			// Set the ProgressBar in the center of the layout
+			LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+					LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+			layoutParams.gravity = Gravity.CENTER;
+			mProgBar.setLayoutParams(layoutParams);
+
+			// Replace the ListView with the ProgressBar
+			mLayout.removeView(mListView);
+			mLayout.addView(mProgBar);
+			mProgBar.setVisibility(View.VISIBLE);
 		}
 
 		@Override
@@ -1434,11 +1458,14 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		protected void onPostExecute(Void result) {
 			super.onPostExecute(result);
 
-			if (!isCancelled()) {
-				if (myDialog != null && myDialog.isShowing()) {
-					myDialog.dismiss();
-				}
-			}
+			// Restore the layout parameters
+			mLayout.setLayoutParams(new FrameLayout.LayoutParams(
+					LayoutParams.FILL_PARENT, LayoutParams.WRAP_CONTENT));
+			mLayout.setGravity(Gravity.TOP);
+
+			// Remove the progress bar and replace it with the list view
+			mLayout.removeView(mProgBar);
+			mLayout.addView(mListView);
 		}
 	}
 
