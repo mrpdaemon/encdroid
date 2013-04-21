@@ -8,3 +8,5 @@ graphics
 obj
 proguard.cfg
 project.properties
+.vimrc
+cscope*
