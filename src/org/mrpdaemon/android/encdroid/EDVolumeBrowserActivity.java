@@ -1425,27 +1425,36 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		protected void onPreExecute() {
 			super.onPreExecute();
 
-			// Replace the ListView with a ProgressBar
-			mProgBar = new ProgressBar(EDVolumeBrowserActivity.this, null,
-					android.R.attr.progressBarStyleLarge);
+			try {
+				// Replace the ListView with a ProgressBar
+				mProgBar = new ProgressBar(EDVolumeBrowserActivity.this, null,
+						android.R.attr.progressBarStyleLarge);
 
-			// Set the layout to fill the screen
-			mListView = EDVolumeBrowserActivity.this.getListView();
-			mLayout = (LinearLayout) mListView.getParent();
-			mLayout.setGravity(Gravity.CENTER);
-			mLayout.setLayoutParams(new FrameLayout.LayoutParams(
-					LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
+				// Set the layout to fill the screen
+				mListView = EDVolumeBrowserActivity.this.getListView();
+				mLayout = (LinearLayout) mListView.getParent();
+				mLayout.setGravity(Gravity.CENTER);
+				mLayout.setLayoutParams(new FrameLayout.LayoutParams(
+						LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
 
-			// Set the ProgressBar in the center of the layout
-			LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-					LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-			layoutParams.gravity = Gravity.CENTER;
-			mProgBar.setLayoutParams(layoutParams);
+				// Set the ProgressBar in the center of the layout
+				LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+						LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+				layoutParams.gravity = Gravity.CENTER;
+				mProgBar.setLayoutParams(layoutParams);
 
-			// Replace the ListView with the ProgressBar
-			mLayout.removeView(mListView);
-			mLayout.addView(mProgBar);
-			mProgBar.setVisibility(View.VISIBLE);
+				// Replace the ListView with the ProgressBar
+				mLayout.removeView(mListView);
+				mLayout.addView(mProgBar);
+				mProgBar.setVisibility(View.VISIBLE);
+			} catch (NullPointerException ne) {
+				/*
+				 * Its possible for mListView.getParent() to return null in some
+				 * cases where user spams the Refresh action item, so we just
+				 * don't set up a progress bar in that case.
+				 */
+				mProgBar = null;
+			}
 		}
 
 		@Override
@@ -1458,14 +1467,16 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		protected void onPostExecute(Void result) {
 			super.onPostExecute(result);
 
-			// Restore the layout parameters
-			mLayout.setLayoutParams(new FrameLayout.LayoutParams(
-					LayoutParams.FILL_PARENT, LayoutParams.WRAP_CONTENT));
-			mLayout.setGravity(Gravity.TOP);
+			if (mProgBar != null) {
+				// Restore the layout parameters
+				mLayout.setLayoutParams(new FrameLayout.LayoutParams(
+						LayoutParams.FILL_PARENT, LayoutParams.WRAP_CONTENT));
+				mLayout.setGravity(Gravity.TOP);
 
-			// Remove the progress bar and replace it with the list view
-			mLayout.removeView(mProgBar);
-			mLayout.addView(mListView);
+				// Remove the progress bar and replace it with the list view
+				mLayout.removeView(mProgBar);
+				mLayout.addView(mListView);
+			}
 		}
 	}
 
