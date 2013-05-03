@@ -7,6 +7,8 @@ gen
 graphics
 obj
 proguard.cfg
+proguard-project.txt
 project.properties
+local.properties
 .vimrc
 cscope*
