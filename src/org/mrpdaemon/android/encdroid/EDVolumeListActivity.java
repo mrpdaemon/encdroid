@@ -46,6 +46,7 @@ import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.preference.PreferenceManager;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.util.SparseBooleanArray;
@@ -353,17 +354,30 @@ public class EDVolumeListActivity extends ListActivity {
 	 */
 	@Override
 	protected void onPrepareDialog(int id, final Dialog dialog) {
-		final EditText input;
+		final EditText input = (EditText) dialog
+				.findViewById(R.id.dialog_edit_text);
 		boolean rename = false;
+
+		// Reset inputType for non-password dialogs
+		if (input != null) {
+			input.setInputType(InputType.TYPE_CLASS_TEXT);
+		}
 
 		switch (id) {
 		case DIALOG_VOL_RENAME:
 			rename = true;
 		case DIALOG_VOL_PASS:
+			if (id == DIALOG_VOL_PASS) {
+				if (input != null) {
+					// Don't auto complete
+					input.setInputType(InputType.TYPE_TEXT_VARIATION_PASSWORD
+							| InputType.TYPE_CLASS_TEXT
+							| InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+				}
+			}
 		case DIALOG_VOL_CREATEPASS:
 		case DIALOG_VOL_NAME:
 		case DIALOG_VOL_CREATE:
-			input = (EditText) dialog.findViewById(R.id.dialog_edit_text);
 			if (input != null) {
 				if (rename && mSelectedVolume != null) {
 					input.setText(mSelectedVolume.getName());
