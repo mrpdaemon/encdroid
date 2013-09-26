@@ -873,8 +873,9 @@ public class EDVolumeBrowserActivity extends ListActivity {
 			File dstFile = new File(mFileObserver.getPath());
 
 			// If the file was modified we need to sync it back
-			Date newDate=new Date(dstFile.lastModified());
-			if (mFileObserver.wasModified() || (newDate.compareTo(mOrigModifiedDate)>0) ) {
+			Date newDate = new Date(dstFile.lastModified());
+			if (mFileObserver.wasModified()
+					|| (newDate.compareTo(mOrigModifiedDate) > 0)) {
 				// Sync file contents
 				try {
 					launchAsyncTask(ASYNC_TASK_SYNC, dstFile, mOpenFile);
@@ -1599,7 +1600,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 							dstFile.getAbsolutePath());
 					mFileObserver.startWatching();
 
-					mOrigModifiedDate=new Date(dstFile.lastModified());
+					mOrigModifiedDate = new Date(dstFile.lastModified());
 					// Figure out the MIME type
 					String fileName = dstFile.getName();
 					String extension = MimeTypeMap
