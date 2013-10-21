@@ -73,6 +73,9 @@ public class EDFileUtils {
 					|| mimeType.equals("application/x-gtar")) {
 				// Archive files
 				return R.drawable.ic_mimetype_archive;
+			} else if (mimeType.equals("application/pdf")
+					|| mimeType.equals("application/x-pdf")) {
+				return R.drawable.ic_mimetype_pdf;
 			}
 
 		}
