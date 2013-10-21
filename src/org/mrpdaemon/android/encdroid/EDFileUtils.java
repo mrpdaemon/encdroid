@@ -5,7 +5,7 @@ import android.webkit.MimeTypeMap;
 
 public class EDFileUtils {
 
-	public static String getMimeTypeFromFileName(String fileName) {
+	public static String getExtensionFromFileName(String fileName) {
 		// Figure out the MIME type
 		String extension = MimeTypeMap.getFileExtensionFromUrl(fileName);
 		if (TextUtils.isEmpty(extension)) {
@@ -18,7 +18,12 @@ public class EDFileUtils {
 			}
 		}
 
-		return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+		return extension;
+	}
+
+	public static String getMimeTypeFromFileName(String fileName) {
+		return MimeTypeMap.getSingleton().getMimeTypeFromExtension(
+				getExtensionFromFileName(fileName));
 	}
 
 	public static int getIconResourceForMimeType(String mimeType) {
@@ -78,6 +83,19 @@ public class EDFileUtils {
 				return R.drawable.ic_mimetype_pdf;
 			}
 
+		}
+
+		// Default file icon
+		return R.drawable.ic_file;
+	}
+
+	public static int getIconResourceForFileExtension(String fileName) {
+		String extension = getExtensionFromFileName(fileName);
+
+		if (extension != null) {
+			if (extension.equals("kdb")) {
+				return R.drawable.ic_mimetype_kdb;
+			}
 		}
 
 		// Default file icon

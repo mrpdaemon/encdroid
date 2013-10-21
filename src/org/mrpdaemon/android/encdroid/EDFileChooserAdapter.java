@@ -94,8 +94,13 @@ public class EDFileChooserAdapter extends ArrayAdapter<EDFileChooserItem> {
 				} else {
 					String mimeType = EDFileUtils.getMimeTypeFromFileName(item
 							.getName());
-					fileIcon.setImageResource(EDFileUtils
-							.getIconResourceForMimeType(mimeType));
+					if (mimeType != null) {
+						fileIcon.setImageResource(EDFileUtils
+								.getIconResourceForMimeType(mimeType));
+					} else {
+						fileIcon.setImageResource(EDFileUtils
+								.getIconResourceForFileExtension(item.getName()));
+					}
 				}
 			}
 
