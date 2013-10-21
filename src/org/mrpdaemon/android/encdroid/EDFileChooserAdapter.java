@@ -92,7 +92,10 @@ public class EDFileChooserAdapter extends ArrayAdapter<EDFileChooserItem> {
 				if (item.isDirectory()) {
 					fileIcon.setImageResource(R.drawable.ic_folder);
 				} else {
-					fileIcon.setImageResource(R.drawable.ic_file);
+					String mimeType = EDFileUtils.getMimeTypeFromFileName(item
+							.getName());
+					fileIcon.setImageResource(EDFileUtils
+							.getIconResourceForMimeType(mimeType));
 				}
 			}
 
