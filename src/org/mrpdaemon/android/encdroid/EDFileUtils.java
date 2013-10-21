@@ -95,6 +95,14 @@ public class EDFileUtils {
 		if (extension != null) {
 			if (extension.equals("kdb")) {
 				return R.drawable.ic_mimetype_kdb;
+			} else if (extension.equals("odp")) {
+				return R.drawable.ic_mimetype_presentation;
+			} else if (extension.equals("bz2")) {
+				return R.drawable.ic_mimetype_archive;
+			} else if (extension.equals("gz")) {
+				return R.drawable.ic_mimetype_archive;
+			} else if (extension.equals("xz")) {
+				return R.drawable.ic_mimetype_archive;
 			}
 		}
 
