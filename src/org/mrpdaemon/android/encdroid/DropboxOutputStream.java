@@ -31,7 +31,7 @@ import com.dropbox.client2.exception.DropboxException;
 
 public class DropboxOutputStream extends OutputStream {
 
-	private static final String TAG = "EDDropboxOutputStream";
+	private static final String TAG = "DropboxOutputStream";
 
 	// Pipe's input end to hand off to DropboxAPI.putFile()
 	private PipedInputStream pipeDropbox;

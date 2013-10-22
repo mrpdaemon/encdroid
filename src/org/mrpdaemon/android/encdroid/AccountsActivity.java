@@ -38,7 +38,7 @@ public class AccountsActivity extends Activity {
 	private final static int DIALOG_ERROR = 0;
 
 	// Logger tag
-	private final static String TAG = "EDAccountsActivity";
+	private final static String TAG = "AccountsActivity";
 
 	// Application object
 	private EDApplication mApp;

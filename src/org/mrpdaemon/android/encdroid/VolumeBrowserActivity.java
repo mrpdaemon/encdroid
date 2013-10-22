@@ -121,7 +121,7 @@ public class VolumeBrowserActivity extends ListActivity {
 	private final static int ASYNC_TASK_PASTE = 7;
 
 	// Logger tag
-	private final static String TAG = "EDVolumeBrowserActivity";
+	private final static String TAG = "VolumeBrowserActivity";
 
 	// Adapter for the list
 	private FileChooserAdapter mAdapter = null;
@@ -129,11 +129,11 @@ public class VolumeBrowserActivity extends ListActivity {
 	// List that is currently being displayed
 	private List<FileChooserItem> mCurFileList;
 
-	// EDVolume
-	private Volume mEDVolume;
+	// Volume
+	private Volume mVolume;
 
 	// EncFS volume
-	private EncFSVolume mVolume;
+	private EncFSVolume mEncfsVolume;
 
 	// Directory stack
 	private Stack<EncFSFile> mDirStack;
@@ -276,9 +276,9 @@ public class VolumeBrowserActivity extends ListActivity {
 			// Activity being created for the first time
 			Bundle params = getIntent().getExtras();
 			int position = params.getInt(VOL_ID_KEY);
-			mEDVolume = mApp.getVolumeList().get(position);
-			mVolume = mEDVolume.getVolume();
-			mCurEncFSDir = mVolume.getRootDir();
+			mVolume = mApp.getVolumeList().get(position);
+			mEncfsVolume = mVolume.getVolume();
+			mCurEncFSDir = mEncfsVolume.getRootDir();
 			mDirStack = new Stack<EncFSFile>();
 
 			launchFillTask();
@@ -296,8 +296,8 @@ public class VolumeBrowserActivity extends ListActivity {
 				exitToVolumeList();
 				return;
 			}
-			mEDVolume = restoreContext.savedVolume;
-			mVolume = mEDVolume.getVolume();
+			mVolume = restoreContext.savedVolume;
+			mEncfsVolume = mVolume.getVolume();
 			mFileObserver = restoreContext.savedObserver;
 			mSelectedFile = restoreContext.savedSelectedFile;
 			mAsyncTask = restoreContext.savedTask;
@@ -360,11 +360,11 @@ public class VolumeBrowserActivity extends ListActivity {
 		}
 	}
 
-	// Retain the EDVolume object through activity being killed
+	// Retain the Volume object through activity being killed
 	@Override
 	public Object onRetainNonConfigurationInstance() {
 		ActivityRestoreContext restoreContext = new ActivityRestoreContext();
-		restoreContext.savedVolume = mEDVolume;
+		restoreContext.savedVolume = mVolume;
 		restoreContext.savedObserver = mFileObserver;
 		restoreContext.savedSelectedFile = mSelectedFile;
 		if (mAsyncTask != null
@@ -385,7 +385,7 @@ public class VolumeBrowserActivity extends ListActivity {
 	@Override
 	protected void onSaveInstanceState(Bundle outState) {
 		if (mCurEncFSDir == null) {
-			// Being recreated again before EDRestoreActivityTask ran
+			// Being recreated again before ActivityRestoreTask ran
 			outState.putString(SAVED_CUR_DIR_PATH_KEY, mSavedCurDirPath);
 		} else {
 			outState.putString(SAVED_CUR_DIR_PATH_KEY, mCurEncFSDir.getPath());
@@ -493,7 +493,7 @@ public class VolumeBrowserActivity extends ListActivity {
 			launchFillTask();
 			return true;
 		case android.R.id.home:
-			if (mCurEncFSDir == mVolume.getRootDir()) {
+			if (mCurEncFSDir == mEncfsVolume.getRootDir()) {
 				// Go back to volume list
 				Intent intent = new Intent(this, VolumeListActivity.class);
 				intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -516,7 +516,7 @@ public class VolumeBrowserActivity extends ListActivity {
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
-			if (mCurEncFSDir == mVolume.getRootDir()) {
+			if (mCurEncFSDir == mEncfsVolume.getRootDir()) {
 				// Go back to volume list
 				Intent intent = new Intent(this, VolumeListActivity.class);
 				intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -972,7 +972,7 @@ public class VolumeBrowserActivity extends ListActivity {
 
 		// Get the parent of the input directory
 		try {
-			curDir = mVolume.getFile(dir.getParentPath());
+			curDir = mEncfsVolume.getFile(dir.getParentPath());
 		} catch (Exception e) {
 			Logger.logException(TAG, e);
 			return new Stack<EncFSFile>();
@@ -987,7 +987,7 @@ public class VolumeBrowserActivity extends ListActivity {
 		while (!curDir.getPath().equals(EncFSVolume.ROOT_PATH)) {
 			tmpStack.push(curDir);
 			try {
-				curDir = mVolume.getFile(curDir.getParentPath());
+				curDir = mEncfsVolume.getFile(curDir.getParentPath());
 			} catch (Exception e) {
 				Logger.logException(TAG, e);
 				return new Stack<EncFSFile>();
@@ -995,7 +995,7 @@ public class VolumeBrowserActivity extends ListActivity {
 		}
 
 		// Add root directory to the stack
-		tmpStack.push(mVolume.getRootDir());
+		tmpStack.push(mEncfsVolume.getRootDir());
 
 		// Reverse tmpStack into resultStack
 		resultStack = new Stack<EncFSFile>();
@@ -1047,10 +1047,10 @@ public class VolumeBrowserActivity extends ListActivity {
 		runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				setTitle(mEDVolume.getName());
+				setTitle(mVolume.getName());
 
 				if ((emptyDir == true)
-						&& (mCurEncFSDir == mVolume.getRootDir())) {
+						&& (mCurEncFSDir == mEncfsVolume.getRootDir())) {
 					// Empty volume message
 					mListHeader.setText(getString(R.string.no_files));
 				} else {
@@ -1088,7 +1088,7 @@ public class VolumeBrowserActivity extends ListActivity {
 		 * is present (API < 11). With ActionBar we use the Up icon for
 		 * navigation.
 		 */
-		if ((mActionBar == null) && (mCurEncFSDir != mVolume.getRootDir())) {
+		if ((mActionBar == null) && (mCurEncFSDir != mEncfsVolume.getRootDir())) {
 			mCurFileList.add(0, new FileChooserItem("..", true, "", 0));
 		}
 
@@ -1382,11 +1382,11 @@ public class VolumeBrowserActivity extends ListActivity {
 
 			try {
 				if (file.isDirectory()) { // Directory
-					if (mVolume.makeDir(dstPath)) {
+					if (mEncfsVolume.makeDir(dstPath)) {
 						task.incrementProgressBy(1);
 						// Import all files/folders under this dir
-						if (recursiveImport(file, mVolume.getFile(dstPath),
-								task) == false) {
+						if (recursiveImport(file,
+								mEncfsVolume.getFile(dstPath), task) == false) {
 							return false;
 						}
 					} else {
@@ -1395,7 +1395,7 @@ public class VolumeBrowserActivity extends ListActivity {
 						return false;
 					}
 				} else { // Import an individual file
-					if (importFile(file, mVolume.createFile(dstPath), null) == false) {
+					if (importFile(file, mEncfsVolume.createFile(dstPath), null) == false) {
 						return false;
 					}
 					task.incrementProgressBy(1);
@@ -1506,7 +1506,7 @@ public class VolumeBrowserActivity extends ListActivity {
 			 */
 			if ((srcFile == null) && (mOpenFilePath != null)) {
 				try {
-					srcFile = mVolume.getFile(mOpenFilePath);
+					srcFile = mEncfsVolume.getFile(mOpenFilePath);
 				} catch (Exception e) {
 					Logger.logException(TAG, e);
 					exitToVolumeList();
@@ -1656,7 +1656,7 @@ public class VolumeBrowserActivity extends ListActivity {
 			 */
 			if ((dstFile == null) && (mOpenFilePath != null)) {
 				try {
-					dstFile = mVolume.getFile(mOpenFilePath);
+					dstFile = mEncfsVolume.getFile(mOpenFilePath);
 				} catch (Exception e) {
 					Logger.logException(TAG, e);
 					exitToVolumeList();
@@ -1719,15 +1719,15 @@ public class VolumeBrowserActivity extends ListActivity {
 						srcFile.getName());
 
 				if (srcFile.isDirectory()) {
-					if (mVolume.makeDir(dstPath)) {
-						dstFile = mVolume.getFile(dstPath);
+					if (mEncfsVolume.makeDir(dstPath)) {
+						dstFile = mEncfsVolume.getFile(dstPath);
 					} else {
 						mErrDialogText = String.format(
 								getString(R.string.error_mkdir_fail), dstPath);
 						return false;
 					}
 				} else {
-					dstFile = mVolume.createFile(dstPath);
+					dstFile = mEncfsVolume.createFile(dstPath);
 				}
 			} catch (Exception e) {
 				Logger.logException(TAG, e);
@@ -1783,14 +1783,14 @@ public class VolumeBrowserActivity extends ListActivity {
 			try {
 				boolean result;
 				if (mPasteMode == PASTE_OP_CUT) {
-					result = mVolume.movePath(mPasteFile.getPath(),
+					result = mEncfsVolume.movePath(mPasteFile.getPath(),
 							EncFSVolume.combinePath(mCurEncFSDir, mPasteFile),
 							new ProgressListener(this));
 				} else {
 					// If destination path exists, use a duplicate name
 					String combinedPath = EncFSVolume.combinePath(mCurEncFSDir,
 							mPasteFile);
-					if (mVolume.pathExists(combinedPath)) {
+					if (mEncfsVolume.pathExists(combinedPath)) {
 						// Bump up a counter until path doesn't exist
 						int counter = 0;
 						do {
@@ -1798,12 +1798,12 @@ public class VolumeBrowserActivity extends ListActivity {
 							combinedPath = EncFSVolume.combinePath(
 									mCurEncFSDir, "(Copy " + counter + ") "
 											+ mPasteFile.getName());
-						} while (mVolume.pathExists(combinedPath));
+						} while (mEncfsVolume.pathExists(combinedPath));
 
-						result = mVolume.copyPath(mPasteFile.getPath(),
+						result = mEncfsVolume.copyPath(mPasteFile.getPath(),
 								combinedPath, new ProgressListener(this));
 					} else {
-						result = mVolume.copyPath(mPasteFile.getPath(),
+						result = mEncfsVolume.copyPath(mPasteFile.getPath(),
 								mCurEncFSDir.getPath(), new ProgressListener(
 										this));
 					}
@@ -1889,8 +1889,9 @@ public class VolumeBrowserActivity extends ListActivity {
 			case DELETE_FILE:
 				try {
 					// boolean result = mSelectedFile.getFile().delete();
-					boolean result = mVolume.deletePath(mSelectedFile.getFile()
-							.getPath(), true, new ProgressListener(this));
+					boolean result = mEncfsVolume.deletePath(mSelectedFile
+							.getFile().getPath(), true, new ProgressListener(
+							this));
 
 					if (result == false) {
 						mErrDialogText = String.format(
@@ -1910,13 +1911,13 @@ public class VolumeBrowserActivity extends ListActivity {
 							strArg);
 
 					// Check if the destination path exists
-					if (mVolume.pathExists(dstPath)) {
+					if (mEncfsVolume.pathExists(dstPath)) {
 						mErrDialogText = String.format(
 								getString(R.string.error_path_exists), dstPath);
 						return false;
 					}
 
-					boolean result = mVolume.movePath(
+					boolean result = mEncfsVolume.movePath(
 							EncFSVolume.combinePath(mCurEncFSDir,
 									mSelectedFile.getName()), dstPath,
 							new ProgressListener(this));
@@ -1935,8 +1936,8 @@ public class VolumeBrowserActivity extends ListActivity {
 				return true;
 			case CREATE_DIR:
 				try {
-					boolean result = mVolume.makeDir(EncFSVolume.combinePath(
-							mCurEncFSDir, strArg));
+					boolean result = mEncfsVolume.makeDir(EncFSVolume
+							.combinePath(mCurEncFSDir, strArg));
 
 					if (result == false) {
 						mErrDialogText = String.format(
@@ -1992,9 +1993,9 @@ public class VolumeBrowserActivity extends ListActivity {
 			try {
 				// XXX: volume.getFile("/") should return volume.getRootDir()
 				if (mSavedCurDirPath.equals(EncFSVolume.ROOT_PATH)) {
-					mCurEncFSDir = mVolume.getRootDir();
+					mCurEncFSDir = mEncfsVolume.getRootDir();
 				} else {
-					mCurEncFSDir = mVolume.getFile(savedInstanceState
+					mCurEncFSDir = mEncfsVolume.getFile(savedInstanceState
 							.getString(SAVED_CUR_DIR_PATH_KEY));
 				}
 			} catch (Exception e) {
@@ -2006,7 +2007,7 @@ public class VolumeBrowserActivity extends ListActivity {
 			// Restore paste state
 			if (mPasteMode != PASTE_OP_NONE) {
 				try {
-					mPasteFile = mVolume.getFile(savedInstanceState
+					mPasteFile = mEncfsVolume.getFile(savedInstanceState
 							.getString(SAVED_PASTE_FILE_PATH_KEY));
 				} catch (Exception e) {
 					Logger.logException(TAG, e);

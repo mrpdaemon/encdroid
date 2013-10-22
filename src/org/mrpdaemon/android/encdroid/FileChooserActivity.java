@@ -89,7 +89,7 @@ public class FileChooserActivity extends ListActivity {
 	public final static String CUR_DIR_KEY = "current_dir";
 
 	// Logger tag
-	private static final String TAG = "EDFileChooserActivity";
+	private static final String TAG = "FileChooserActivity";
 
 	// Dialog ID's
 	private final static int DIALOG_AUTO_IMPORT = 0;
@@ -172,7 +172,7 @@ public class FileChooserActivity extends ListActivity {
 					.getDropbox();
 
 			if (dropbox.isLinked()) {
-				// XXX: Use EDDropboxFileProvider.getRootPath() - pending
+				// XXX: Use DropboxFileProvider.getRootPath() - pending
 				// encfs-java issue #37
 				mFileProvider = new DropboxFileProvider(dropbox.getApi(), "/");
 			} else {
@@ -492,7 +492,7 @@ public class FileChooserActivity extends ListActivity {
 
 	// Show a progress spinner and launch the fill task
 	private void launchFillTask() {
-		new EDFileChooserFillTask().execute();
+		new FileChooserFillTask().execute();
 	}
 
 	/*
@@ -500,13 +500,13 @@ public class FileChooserActivity extends ListActivity {
 	 * up doing network I/O with certain file providers and starting with API
 	 * version 13 doing so results in a NetworkOnMainThreadException.
 	 */
-	private class EDFileChooserFillTask extends AsyncTask<Void, Void, Boolean> {
+	private class FileChooserFillTask extends AsyncTask<Void, Void, Boolean> {
 
 		private ProgressBar mProgBar;
 		private ListView mListView;
 		private LinearLayout mLayout;
 
-		public EDFileChooserFillTask() {
+		public FileChooserFillTask() {
 			super();
 		}
 

@@ -33,7 +33,7 @@ import android.util.Log;
 public class DBHelper extends SQLiteOpenHelper {
 
 	// Logger tag
-	private final String TAG = "EDDBHelper";
+	private final String TAG = "DBHelper";
 
 	// Database name
 	public static final String DB_NAME = "volume.db";
@@ -161,7 +161,7 @@ public class DBHelper extends SQLiteOpenHelper {
 		ArrayList<Volume> volumes = new ArrayList<Volume>();
 		SQLiteDatabase db = getReadableDatabase();
 
-		// SELECT *, loop over each, create EDVolume
+		// SELECT *, loop over each, create Volume
 		Cursor cursor = db.rawQuery("SELECT * FROM " + DB_TABLE, NO_ARGS);
 
 		int nameColId = cursor.getColumnIndex(DB_COL_NAME);

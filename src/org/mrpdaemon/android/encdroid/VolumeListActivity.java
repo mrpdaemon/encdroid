@@ -70,7 +70,7 @@ import android.widget.Toast;
 
 public class VolumeListActivity extends ListActivity {
 
-	// Request into EDFileChooserActivity to run in different modes
+	// Request into FileChooserActivity to run in different modes
 	private final static int LOCAL_VOLUME_PICKER_REQUEST = 0;
 	private final static int LOCAL_VOLUME_CREATE_REQUEST = 1;
 	private final static int EXT_SD_VOLUME_PICKER_REQUEST = 2;
@@ -108,7 +108,7 @@ public class VolumeListActivity extends ListActivity {
 	private final static String SAVED_PROGRESS_BAR_STR_ARG_KEY = "prog_bar_str";
 
 	// Logger tag
-	private final static String TAG = "EDVolumeListActivity";
+	private final static String TAG = "VolumeListActivity";
 
 	// Suffix for newly created volume directories
 	private final static String NEW_VOLUME_DIR_SUFFIX = ".encdroid";
@@ -119,7 +119,7 @@ public class VolumeListActivity extends ListActivity {
 	// Application object
 	private EDApplication mApp;
 
-	// Currently selected EDVolumeList item
+	// Currently selected VolumeList item
 	private Volume mSelectedVolume;
 	private int mSelectedVolIdx;
 

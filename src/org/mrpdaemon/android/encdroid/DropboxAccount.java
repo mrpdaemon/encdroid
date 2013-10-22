@@ -41,7 +41,7 @@ public class DropboxAccount {
 	private final static AccessType ACCESS_TYPE = AccessType.DROPBOX;
 
 	// Log tag
-	private final static String TAG = "EDDropbox";
+	private final static String TAG = "DropboxAccount";
 
 	// Preference keys
 	private final static String PREFS_KEY = "dropbox_prefs";

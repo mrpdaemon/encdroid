@@ -40,7 +40,7 @@ import com.dropbox.client2.exception.DropboxServerException;
 public class DropboxFileProvider implements EncFSFileProvider {
 
 	// Logger tag
-	private final static String TAG = "EDDropboxFileProvider";
+	private final static String TAG = "DropboxFileProvider";
 
 	// API object
 	private DropboxAPI<AndroidAuthSession> api;
