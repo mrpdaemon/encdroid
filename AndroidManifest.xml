@@ -18,7 +18,7 @@
         android:label="@string/app_name"
         android:theme="@style/LightThemeSelector" >
         <activity
-            android:name=".EDVolumeListActivity"
+            android:name=".VolumeListActivity"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -39,11 +39,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <activity android:name=".EDFileChooserActivity" >
+        <activity android:name=".FileChooserActivity" >
         </activity>
-        <activity android:name=".EDVolumeBrowserActivity" >
+        <activity android:name=".VolumeBrowserActivity" >
         </activity>
-        <activity android:name=".EDAccountsActivity" >
+        <activity android:name=".AccountsActivity" >
         </activity>
         <activity android:name=".EDPreferenceActivity" >
         </activity>

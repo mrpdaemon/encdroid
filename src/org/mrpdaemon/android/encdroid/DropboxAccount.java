@@ -30,7 +30,7 @@ import com.dropbox.client2.session.AccessTokenPair;
 import com.dropbox.client2.session.AppKeyPair;
 import com.dropbox.client2.session.Session.AccessType;
 
-public class EDDropbox {
+public class DropboxAccount {
 	// Dropbox app key
 	private final static String APP_KEY = "<YOUR APP KEY HERE>";
 
@@ -71,7 +71,7 @@ public class EDDropbox {
 	// User name
 	private String userName;
 
-	public EDDropbox(EDApplication app) {
+	public DropboxAccount(EDApplication app) {
 		mApp = app;
 
 		mPrefs = mApp.getSharedPreferences(PREFS_KEY, 0);

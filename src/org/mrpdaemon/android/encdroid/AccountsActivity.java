@@ -32,7 +32,7 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 
-public class EDAccountsActivity extends Activity {
+public class AccountsActivity extends Activity {
 
 	// Error dialog
 	private final static int DIALOG_ERROR = 0;
@@ -44,10 +44,10 @@ public class EDAccountsActivity extends Activity {
 	private EDApplication mApp;
 
 	// Dropbox object
-	private EDDropbox mDropbox;
+	private DropboxAccount mDropbox;
 
 	// Action bar object
-	private EDActionBar mActionBar = null;
+	private ActionBarHelper mActionBar = null;
 
 	// Text for the error dialog
 	private String mErrDialogText = "";
@@ -68,7 +68,7 @@ public class EDAccountsActivity extends Activity {
 		setTitle(getString(R.string.accounts));
 
 		if (mApp.isActionBarAvailable()) {
-			mActionBar = new EDActionBar(this);
+			mActionBar = new ActionBarHelper(this);
 			mActionBar.setDisplayHomeAsUpEnabled(true);
 		}
 	}
@@ -83,7 +83,7 @@ public class EDAccountsActivity extends Activity {
 		switch (item.getItemId()) {
 		case android.R.id.home:
 			// Go back to volume list
-			Intent intent = new Intent(this, EDVolumeListActivity.class);
+			Intent intent = new Intent(this, VolumeListActivity.class);
 			intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 			startActivity(intent);
 			break;
@@ -102,7 +102,7 @@ public class EDAccountsActivity extends Activity {
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
 			// Go back to volume list
-			Intent intent = new Intent(this, EDVolumeListActivity.class);
+			Intent intent = new Intent(this, VolumeListActivity.class);
 			intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 			startActivity(intent);
 
@@ -181,7 +181,7 @@ public class EDAccountsActivity extends Activity {
 				@Override
 				public void onClick(View v) {
 					// Start linking an account
-					mDropbox.startLinkorAuth(EDAccountsActivity.this);
+					mDropbox.startLinkorAuth(AccountsActivity.this);
 				}
 			});
 		}

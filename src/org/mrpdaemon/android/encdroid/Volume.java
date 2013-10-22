@@ -20,7 +20,7 @@ package org.mrpdaemon.android.encdroid;
 
 import org.mrpdaemon.sec.encfs.EncFSVolume;
 
-public class EDVolume {
+public class Volume {
 
 	// Volume types
 	public final static int LOCAL_VOLUME = 0;
@@ -42,7 +42,7 @@ public class EDVolume {
 	// EncFS volume associated with this volume
 	private EncFSVolume volume;
 
-	public EDVolume(String name, String path, int type) {
+	public Volume(String name, String path, int type) {
 		super();
 		this.name = name;
 		this.path = path;

@@ -32,17 +32,16 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-public class EDVolumeListAdapter extends ArrayAdapter<EDVolume> {
+public class VolumeListAdapter extends ArrayAdapter<Volume> {
 
 	Context context;
 	private int resourceId;
-	List<EDVolume> items;
+	List<Volume> items;
 
 	// Shared preferences
 	private SharedPreferences mPrefs = null;
 
-	public EDVolumeListAdapter(Context context, int resourceId,
-			List<EDVolume> items) {
+	public VolumeListAdapter(Context context, int resourceId, List<Volume> items) {
 		super(context, resourceId, items);
 		this.context = context;
 		this.resourceId = resourceId;
@@ -50,7 +49,7 @@ public class EDVolumeListAdapter extends ArrayAdapter<EDVolume> {
 		this.mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 	}
 
-	public EDVolume getItem(int i) {
+	public Volume getItem(int i) {
 		return items.get(i);
 	}
 
@@ -63,7 +62,7 @@ public class EDVolumeListAdapter extends ArrayAdapter<EDVolume> {
 			row = inflater.inflate(resourceId, null);
 		}
 
-		final EDVolume item = items.get(position);
+		final Volume item = items.get(position);
 
 		if (item != null) {
 			TextView volumeName = (TextView) row
@@ -84,15 +83,15 @@ public class EDVolumeListAdapter extends ArrayAdapter<EDVolume> {
 
 			if (volumePath != null) {
 				switch (item.getType()) {
-				case EDVolume.LOCAL_VOLUME:
+				case Volume.LOCAL_VOLUME:
 					volumePath.setText(Environment
 							.getExternalStorageDirectory().getAbsolutePath()
 							+ item.getPath());
 					break;
-				case EDVolume.DROPBOX_VOLUME:
+				case Volume.DROPBOX_VOLUME:
 					volumePath.setText("[Dropbox]:" + item.getPath());
 					break;
-				case EDVolume.EXT_SD_VOLUME:
+				case Volume.EXT_SD_VOLUME:
 					volumePath.setText("["
 							+ context.getString(R.string.ext_sd_vol_prefix_str)
 							+ "]:" + item.getPath());
@@ -128,9 +127,9 @@ public class EDVolumeListAdapter extends ArrayAdapter<EDVolume> {
 
 	@Override
 	public boolean isEnabled(int position) {
-		final EDVolume item = items.get(position);
+		final Volume item = items.get(position);
 
-		if (item.getType() == EDVolume.EXT_SD_VOLUME) {
+		if (item.getType() == Volume.EXT_SD_VOLUME) {
 			return mPrefs.getBoolean("ext_sd_enabled", false);
 		}
 

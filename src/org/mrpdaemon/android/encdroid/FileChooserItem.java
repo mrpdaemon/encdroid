@@ -20,7 +20,7 @@ package org.mrpdaemon.android.encdroid;
 
 import org.mrpdaemon.sec.encfs.EncFSFile;
 
-public class EDFileChooserItem implements Comparable<EDFileChooserItem> {
+public class FileChooserItem implements Comparable<FileChooserItem> {
 
 	private String name;
 
@@ -32,7 +32,8 @@ public class EDFileChooserItem implements Comparable<EDFileChooserItem> {
 
 	private long size;
 
-	public EDFileChooserItem(String name, boolean isDirectory, String path, long size) {
+	public FileChooserItem(String name, boolean isDirectory, String path,
+			long size) {
 		this.name = name;
 		this.isDirectory = isDirectory;
 		this.path = path;
@@ -40,7 +41,8 @@ public class EDFileChooserItem implements Comparable<EDFileChooserItem> {
 		this.file = null;
 	}
 
-	public EDFileChooserItem(String name, boolean isDirectory, EncFSFile file, long size) {
+	public FileChooserItem(String name, boolean isDirectory, EncFSFile file,
+			long size) {
 		this.name = name;
 		this.isDirectory = isDirectory;
 		this.path = null;
@@ -82,7 +84,7 @@ public class EDFileChooserItem implements Comparable<EDFileChooserItem> {
 	 * @see java.lang.Comparable#compareTo(java.lang.Object)
 	 */
 	@Override
-	public int compareTo(EDFileChooserItem arg0) {
+	public int compareTo(FileChooserItem arg0) {
 		return this.name.toLowerCase().compareTo(arg0.getName().toLowerCase());
 	}
 

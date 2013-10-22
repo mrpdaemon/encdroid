@@ -22,12 +22,12 @@ import org.mrpdaemon.sec.encfs.EncFSProgressListener;
 
 import android.app.Activity;
 
-public class EDProgressListener extends EncFSProgressListener {
+public class ProgressListener extends EncFSProgressListener {
 
 	// Task that owns this progress listener
 	private EDAsyncTask<Void, Void, Boolean> myTask;
 
-	public EDProgressListener(EDAsyncTask<Void, Void, Boolean> task) {
+	public ProgressListener(EDAsyncTask<Void, Void, Boolean> task) {
 		myTask = task;
 	}
 
@@ -41,7 +41,7 @@ public class EDProgressListener extends EncFSProgressListener {
 		}
 
 		switch (eventType) {
-		case EDProgressListener.FILES_COUNTED_EVENT:
+		case ProgressListener.FILES_COUNTED_EVENT:
 			activity.runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
@@ -49,7 +49,7 @@ public class EDProgressListener extends EncFSProgressListener {
 				}
 			});
 			break;
-		case EDProgressListener.NEW_FILE_EVENT:
+		case ProgressListener.NEW_FILE_EVENT:
 			activity.runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
@@ -57,7 +57,7 @@ public class EDProgressListener extends EncFSProgressListener {
 				}
 			});
 			break;
-		case EDProgressListener.FILE_PROCESS_EVENT:
+		case ProgressListener.FILE_PROCESS_EVENT:
 			activity.runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
@@ -65,7 +65,7 @@ public class EDProgressListener extends EncFSProgressListener {
 				}
 			});
 			break;
-		case EDProgressListener.OP_COMPLETE_EVENT:
+		case ProgressListener.OP_COMPLETE_EVENT:
 			break;
 		default:
 			break;

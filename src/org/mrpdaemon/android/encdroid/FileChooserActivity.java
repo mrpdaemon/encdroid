@@ -58,7 +58,7 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-public class EDFileChooserActivity extends ListActivity {
+public class FileChooserActivity extends ListActivity {
 	// Parameter key for activity mode
 	public final static String MODE_KEY = "mode";
 
@@ -95,10 +95,10 @@ public class EDFileChooserActivity extends ListActivity {
 	private final static int DIALOG_AUTO_IMPORT = 0;
 
 	// Adapter for the list
-	private EDFileChooserAdapter mAdapter = null;
+	private FileChooserAdapter mAdapter = null;
 
 	// List that is currently being displayed
-	private List<EDFileChooserItem> mCurFileList;
+	private List<FileChooserItem> mCurFileList;
 
 	// What mode we're running in
 	private int mMode;
@@ -116,7 +116,7 @@ public class EDFileChooserActivity extends ListActivity {
 	private EDApplication mApp;
 
 	// Action bar wrapper
-	private EDActionBar mActionBar = null;
+	private ActionBarHelper mActionBar = null;
 
 	// Text view for list header
 	private TextView mListHeader = null;
@@ -153,7 +153,7 @@ public class EDFileChooserActivity extends ListActivity {
 			mCurrentDir = savedInstanceState.getString(CUR_DIR_KEY);
 		}
 
-		mCurFileList = new ArrayList<EDFileChooserItem>();
+		mCurFileList = new ArrayList<FileChooserItem>();
 
 		mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -168,12 +168,13 @@ public class EDFileChooserActivity extends ListActivity {
 					mPrefs.getString("ext_sd_location", "/mnt/external1")));
 			break;
 		case DROPBOX_FS:
-			EDDropbox dropbox = ((EDApplication) getApplication()).getDropbox();
+			DropboxAccount dropbox = ((EDApplication) getApplication())
+					.getDropbox();
 
 			if (dropbox.isLinked()) {
 				// XXX: Use EDDropboxFileProvider.getRootPath() - pending
 				// encfs-java issue #37
-				mFileProvider = new EDDropboxFileProvider(dropbox.getApi(), "/");
+				mFileProvider = new DropboxFileProvider(dropbox.getApi(), "/");
 			} else {
 				returnFailure();
 			}
@@ -190,7 +191,7 @@ public class EDFileChooserActivity extends ListActivity {
 		mApp = (EDApplication) getApplication();
 
 		if (mApp.isActionBarAvailable()) {
-			mActionBar = new EDActionBar(this);
+			mActionBar = new ActionBarHelper(this);
 			mActionBar.setDisplayHomeAsUpEnabled(true);
 		}
 
@@ -362,7 +363,7 @@ public class EDFileChooserActivity extends ListActivity {
 		try {
 			childFiles = mFileProvider.listFiles(mCurrentDir);
 		} catch (IOException e) {
-			EDLogger.logException(TAG, e);
+			Logger.logException(TAG, e);
 			return false;
 		}
 
@@ -408,19 +409,19 @@ public class EDFileChooserActivity extends ListActivity {
 			}
 		});
 
-		List<EDFileChooserItem> directories = new ArrayList<EDFileChooserItem>();
-		List<EDFileChooserItem> files = new ArrayList<EDFileChooserItem>();
+		List<FileChooserItem> directories = new ArrayList<FileChooserItem>();
+		List<FileChooserItem> files = new ArrayList<FileChooserItem>();
 
 		if (childFiles != null) {
 			for (EncFSFileInfo file : childFiles) {
 				if (file.isDirectory() && file.isReadable()) {
-					directories.add(new EDFileChooserItem(file.getName(), true,
+					directories.add(new FileChooserItem(file.getName(), true,
 							file.getPath(), 0));
 				} else {
 					if (mMode == VOLUME_PICKER_MODE) {
 						if (file.getName().equals(EncFSVolume.CONFIG_FILE_NAME)
 								&& file.isReadable()) {
-							files.add(new EDFileChooserItem(file.getName(),
+							files.add(new FileChooserItem(file.getName(),
 									false, file.getPath(), file.getSize()));
 							configFileFound = true;
 						}
@@ -428,7 +429,7 @@ public class EDFileChooserActivity extends ListActivity {
 							|| mMode == EXPORT_FILE_MODE
 							|| mMode == CREATE_VOLUME_MODE) {
 						if (file.isReadable()) {
-							files.add(new EDFileChooserItem(file.getName(),
+							files.add(new FileChooserItem(file.getName(),
 									false, file.getPath(), file.getSize()));
 						}
 					}
@@ -462,13 +463,12 @@ public class EDFileChooserActivity extends ListActivity {
 						mCurrentDir.lastIndexOf("/"));
 			}
 
-			mCurFileList.add(0,
-					new EDFileChooserItem("..", true, parentPath, 0));
+			mCurFileList.add(0, new FileChooserItem("..", true, parentPath, 0));
 		}
 
 		if (mAdapter == null) {
-			mAdapter = new EDFileChooserAdapter(this,
-					R.layout.file_chooser_item, mCurFileList);
+			mAdapter = new FileChooserAdapter(this, R.layout.file_chooser_item,
+					mCurFileList);
 
 			// Set list adapter from UI thread
 			runOnUiThread(new Runnable() {
@@ -515,11 +515,11 @@ public class EDFileChooserActivity extends ListActivity {
 			super.onPreExecute();
 
 			// Replace the ListView with a ProgressBar
-			mProgBar = new ProgressBar(EDFileChooserActivity.this, null,
+			mProgBar = new ProgressBar(FileChooserActivity.this, null,
 					android.R.attr.progressBarStyleLarge);
 
 			// Set the layout to fill the screen
-			mListView = EDFileChooserActivity.this.getListView();
+			mListView = FileChooserActivity.this.getListView();
 			mLayout = (LinearLayout) mListView.getParent();
 			mLayout.setGravity(Gravity.CENTER);
 			mLayout.setLayoutParams(new FrameLayout.LayoutParams(
@@ -577,7 +577,7 @@ public class EDFileChooserActivity extends ListActivity {
 		if (position == 0) {
 			return;
 		}
-		EDFileChooserItem selected = mAdapter.getItem(position - 1);
+		FileChooserItem selected = mAdapter.getItem(position - 1);
 
 		if (selected.isDirectory()) {
 			mCurrentDir = selected.getPath();
@@ -604,7 +604,7 @@ public class EDFileChooserActivity extends ListActivity {
 		case R.id.file_chooser_menu_select:
 		case R.id.file_picker_menu_import:
 			if (info.id >= 0) {
-				EDFileChooserItem selected = mAdapter.getItem((int) info.id);
+				FileChooserItem selected = mAdapter.getItem((int) info.id);
 				returnResult(selected.getPath());
 			}
 			return true;

@@ -22,7 +22,7 @@ import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 
-public class EDActionBar {
+public class ActionBarHelper {
 	private ActionBar mActionBar;
 
 	/* class initialization fails when this throws an exception */
@@ -39,7 +39,7 @@ public class EDActionBar {
 	}
 
 	@SuppressLint("NewApi")
-	public EDActionBar(Activity activity) {
+	public ActionBarHelper(Activity activity) {
 		mActionBar = activity.getActionBar();
 	}
 

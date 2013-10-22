@@ -20,7 +20,7 @@ package org.mrpdaemon.android.encdroid;
 
 import android.util.Log;
 
-public class EDLogger {
+public class Logger {
 
 	// Safely log an exception
 	public static void logException(String tag, Exception exception) {

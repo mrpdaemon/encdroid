@@ -36,7 +36,7 @@ public class EDPreferenceActivity extends PreferenceActivity implements
 	private EDApplication mApp;
 
 	// Action bar object
-	private EDActionBar mActionBar = null;
+	private ActionBarHelper mActionBar = null;
 
 	// Logger tag
 	private final static String TAG = "EDPreferenceActivity";
@@ -50,7 +50,7 @@ public class EDPreferenceActivity extends PreferenceActivity implements
 		mApp = (EDApplication) getApplication();
 
 		if (mApp.isActionBarAvailable()) {
-			mActionBar = new EDActionBar(this);
+			mActionBar = new ActionBarHelper(this);
 			mActionBar.setDisplayHomeAsUpEnabled(true);
 		}
 
@@ -71,7 +71,7 @@ public class EDPreferenceActivity extends PreferenceActivity implements
 		switch (item.getItemId()) {
 		case android.R.id.home:
 			// Go back to volume list
-			Intent intent = new Intent(this, EDVolumeListActivity.class);
+			Intent intent = new Intent(this, VolumeListActivity.class);
 			intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 			startActivity(intent);
 			break;
@@ -90,7 +90,7 @@ public class EDPreferenceActivity extends PreferenceActivity implements
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
 			// Go back to volume list
-			Intent intent = new Intent(this, EDVolumeListActivity.class);
+			Intent intent = new Intent(this, VolumeListActivity.class);
 			intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 			startActivity(intent);
 

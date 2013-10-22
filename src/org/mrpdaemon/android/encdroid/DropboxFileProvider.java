@@ -37,7 +37,7 @@ import com.dropbox.client2.android.AndroidAuthSession;
 import com.dropbox.client2.exception.DropboxException;
 import com.dropbox.client2.exception.DropboxServerException;
 
-public class EDDropboxFileProvider implements EncFSFileProvider {
+public class DropboxFileProvider implements EncFSFileProvider {
 
 	// Logger tag
 	private final static String TAG = "EDDropboxFileProvider";
@@ -48,7 +48,7 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 	// Root path for this file provider
 	private String rootPath;
 
-	public EDDropboxFileProvider(DropboxAPI<AndroidAuthSession> api,
+	public DropboxFileProvider(DropboxAPI<AndroidAuthSession> api,
 			String rootPath) {
 		this.api = api;
 		this.rootPath = rootPath;
@@ -69,7 +69,7 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 	}
 
 	private void handleDropboxException(DropboxException e) throws IOException {
-		EDLogger.logException(TAG, e);
+		Logger.logException(TAG, e);
 		if (e.getMessage() != null) {
 			throw new IOException(e.getMessage());
 		} else {
@@ -268,7 +268,7 @@ public class EDDropboxFileProvider implements EncFSFileProvider {
 	@Override
 	public OutputStream openOutputStream(String path, long length)
 			throws IOException {
-		return new EDDropboxOutputStream(api, absPath(path), length);
+		return new DropboxOutputStream(api, absPath(path), length);
 	}
 
 	@Override

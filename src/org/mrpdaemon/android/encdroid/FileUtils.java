@@ -21,7 +21,7 @@ package org.mrpdaemon.android.encdroid;
 import android.text.TextUtils;
 import android.webkit.MimeTypeMap;
 
-public class EDFileUtils {
+public class FileUtils {
 
 	public static String getExtensionFromFileName(String fileName) {
 		// Figure out the MIME type

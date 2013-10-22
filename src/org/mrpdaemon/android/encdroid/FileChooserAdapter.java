@@ -28,21 +28,21 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-public class EDFileChooserAdapter extends ArrayAdapter<EDFileChooserItem> {
+public class FileChooserAdapter extends ArrayAdapter<FileChooserItem> {
 
 	private Context context;
 	private int resourceId;
-	private List<EDFileChooserItem> items;
+	private List<FileChooserItem> items;
 
-	public EDFileChooserAdapter(Context context, int resourceId,
-			List<EDFileChooserItem> items) {
+	public FileChooserAdapter(Context context, int resourceId,
+			List<FileChooserItem> items) {
 		super(context, resourceId, items);
 		this.context = context;
 		this.resourceId = resourceId;
 		this.items = items;
 	}
 
-	public EDFileChooserItem getItem(int i) {
+	public FileChooserItem getItem(int i) {
 		return items.get(i);
 	}
 
@@ -65,7 +65,7 @@ public class EDFileChooserAdapter extends ArrayAdapter<EDFileChooserItem> {
 			row = inflater.inflate(resourceId, null);
 		}
 
-		final EDFileChooserItem item = items.get(position);
+		final FileChooserItem item = items.get(position);
 
 		if (item != null) {
 			TextView fileName = (TextView) row
@@ -92,13 +92,13 @@ public class EDFileChooserAdapter extends ArrayAdapter<EDFileChooserItem> {
 				if (item.isDirectory()) {
 					fileIcon.setImageResource(R.drawable.ic_folder);
 				} else {
-					String mimeType = EDFileUtils.getMimeTypeFromFileName(item
+					String mimeType = FileUtils.getMimeTypeFromFileName(item
 							.getName());
 					if (mimeType != null) {
-						fileIcon.setImageResource(EDFileUtils
+						fileIcon.setImageResource(FileUtils
 								.getIconResourceForMimeType(mimeType));
 					} else {
-						fileIcon.setImageResource(EDFileUtils
+						fileIcon.setImageResource(FileUtils
 								.getIconResourceForFileExtension(item.getName()));
 					}
 				}

@@ -30,7 +30,7 @@ import android.provider.BaseColumns;
 import android.util.Base64;
 import android.util.Log;
 
-public class EDDBHelper extends SQLiteOpenHelper {
+public class DBHelper extends SQLiteOpenHelper {
 
 	// Logger tag
 	private final String TAG = "EDDBHelper";
@@ -53,7 +53,7 @@ public class EDDBHelper extends SQLiteOpenHelper {
 
 	private static final String[] NO_ARGS = {};
 
-	public EDDBHelper(Context context) {
+	public DBHelper(Context context) {
 		super(context, DB_NAME, null, DB_VERSION);
 	}
 
@@ -73,7 +73,7 @@ public class EDDBHelper extends SQLiteOpenHelper {
 		onCreate(db);
 	}
 
-	public void insertVolume(EDVolume volume) {
+	public void insertVolume(Volume volume) {
 		SQLiteDatabase db = getWritableDatabase();
 		ContentValues values = new ContentValues();
 
@@ -89,7 +89,7 @@ public class EDDBHelper extends SQLiteOpenHelper {
 		db.insertOrThrow(DB_TABLE, null, values);
 	}
 
-	public void deleteVolume(EDVolume volume) {
+	public void deleteVolume(Volume volume) {
 		SQLiteDatabase db = getWritableDatabase();
 
 		Log.d(TAG, "deleteVolume() " + volume.getName());
@@ -98,7 +98,7 @@ public class EDDBHelper extends SQLiteOpenHelper {
 				new String[] { volume.getName(), volume.getPath() });
 	}
 
-	public void renameVolume(EDVolume volume, String newName) {
+	public void renameVolume(Volume volume, String newName) {
 		SQLiteDatabase db = getWritableDatabase();
 
 		Log.d(TAG, "renameVolume() " + volume.getName() + " to " + newName);
@@ -109,7 +109,7 @@ public class EDDBHelper extends SQLiteOpenHelper {
 				+ "=?", new String[] { volume.getName(), volume.getPath() });
 	}
 
-	public void cacheKey(EDVolume volume, byte[] key) {
+	public void cacheKey(Volume volume, byte[] key) {
 		SQLiteDatabase db = getWritableDatabase();
 
 		Log.d(TAG, "cacheKey() for volume" + volume.getName());
@@ -120,7 +120,7 @@ public class EDDBHelper extends SQLiteOpenHelper {
 				+ "=?", new String[] { volume.getName(), volume.getPath() });
 	}
 
-	public void clearKey(EDVolume volume) {
+	public void clearKey(Volume volume) {
 		SQLiteDatabase db = getWritableDatabase();
 
 		Log.d(TAG, "clearKey() for volume" + volume.getName());
@@ -139,7 +139,7 @@ public class EDDBHelper extends SQLiteOpenHelper {
 		db.execSQL("UPDATE " + DB_TABLE + " SET " + DB_COL_KEY + " = NULL");
 	}
 
-	public byte[] getCachedKey(EDVolume volume) {
+	public byte[] getCachedKey(Volume volume) {
 		SQLiteDatabase db = getReadableDatabase();
 
 		Cursor cursor = db.query(DB_TABLE, NO_ARGS, DB_COL_NAME + "=? AND "
@@ -157,8 +157,8 @@ public class EDDBHelper extends SQLiteOpenHelper {
 		return null;
 	}
 
-	public List<EDVolume> getVolumes() {
-		ArrayList<EDVolume> volumes = new ArrayList<EDVolume>();
+	public List<Volume> getVolumes() {
+		ArrayList<Volume> volumes = new ArrayList<Volume>();
 		SQLiteDatabase db = getReadableDatabase();
 
 		// SELECT *, loop over each, create EDVolume
@@ -177,7 +177,7 @@ public class EDDBHelper extends SQLiteOpenHelper {
 				Log.d(TAG, "getVolume() name: '" + volName + "' path: '"
 						+ volPath + "'");
 
-				EDVolume volume = new EDVolume(volName, volPath, volType);
+				Volume volume = new Volume(volName, volPath, volType);
 
 				volumes.add(volume);
 			} while (cursor.moveToNext());

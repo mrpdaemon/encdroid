@@ -29,7 +29,7 @@ import com.dropbox.client2.DropboxAPI;
 import com.dropbox.client2.android.AndroidAuthSession;
 import com.dropbox.client2.exception.DropboxException;
 
-public class EDDropboxOutputStream extends OutputStream {
+public class DropboxOutputStream extends OutputStream {
 
 	private static final String TAG = "EDDropboxOutputStream";
 
@@ -51,7 +51,7 @@ public class EDDropboxOutputStream extends OutputStream {
 	// Length
 	private final long fileLength;
 
-	public EDDropboxOutputStream(final DropboxAPI<AndroidAuthSession> api,
+	public DropboxOutputStream(final DropboxAPI<AndroidAuthSession> api,
 			final String dstPath, long length) throws IOException {
 		this.failed = false;
 		this.fileLength = length;
@@ -68,12 +68,12 @@ public class EDDropboxOutputStream extends OutputStream {
 				try {
 					api.putFileOverwrite(dstPath, pipeDropbox, fileLength, null);
 				} catch (DropboxException e) {
-					EDLogger.logException(TAG, e);
+					Logger.logException(TAG, e);
 					// Propagate the error
 					if (e.getMessage() != null) {
-						EDDropboxOutputStream.this.fail(e.getMessage());
+						DropboxOutputStream.this.fail(e.getMessage());
 					} else {
-						EDDropboxOutputStream.this.fail(e.toString());
+						DropboxOutputStream.this.fail(e.toString());
 					}
 				}
 			}

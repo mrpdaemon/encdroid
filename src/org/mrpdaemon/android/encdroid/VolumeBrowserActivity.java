@@ -79,7 +79,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class EDVolumeBrowserActivity extends ListActivity {
+public class VolumeBrowserActivity extends ListActivity {
 
 	// Parameter key for specifying volume index
 	public final static String VOL_ID_KEY = "vol_id";
@@ -124,13 +124,13 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	private final static String TAG = "EDVolumeBrowserActivity";
 
 	// Adapter for the list
-	private EDFileChooserAdapter mAdapter = null;
+	private FileChooserAdapter mAdapter = null;
 
 	// List that is currently being displayed
-	private List<EDFileChooserItem> mCurFileList;
+	private List<FileChooserItem> mCurFileList;
 
 	// EDVolume
-	private EDVolume mEDVolume;
+	private Volume mEDVolume;
 
 	// EncFS volume
 	private EncFSVolume mVolume;
@@ -178,7 +178,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	private String mImportFileName;
 
 	// File that is currently selected
-	private EDFileChooserItem mSelectedFile;
+	private FileChooserItem mSelectedFile;
 
 	// EncFSFile that is being pasted
 	private EncFSFile mPasteFile = null;
@@ -201,16 +201,16 @@ public class EDVolumeBrowserActivity extends ListActivity {
 	boolean mExternalStorageWriteable = false;
 
 	// Action bar wrapper
-	private EDActionBar mActionBar = null;
+	private ActionBarHelper mActionBar = null;
 
 	// Text view for list header
 	private TextView mListHeader = null;
 
 	// Class to hold context for restoring an activity after being recreated
 	private class ActivityRestoreContext {
-		public EDVolume savedVolume;
+		public Volume savedVolume;
 		public EDFileObserver savedObserver;
-		public EDFileChooserItem savedSelectedFile;
+		public FileChooserItem savedSelectedFile;
 		public EDAsyncTask<Void, Void, Boolean> savedTask;
 	}
 
@@ -233,7 +233,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 		mApp = (EDApplication) getApplication();
 
-		mCurFileList = new ArrayList<EDFileChooserItem>();
+		mCurFileList = new ArrayList<FileChooserItem>();
 
 		// Start monitoring external storage state
 		mExternalStorageReceiver = new BroadcastReceiver() {
@@ -263,7 +263,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		registerForContextMenu(this.getListView());
 
 		if (mApp.isActionBarAvailable()) {
-			mActionBar = new EDActionBar(this);
+			mActionBar = new ActionBarHelper(this);
 			mActionBar.setDisplayHomeAsUpEnabled(true);
 		}
 
@@ -348,7 +348,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 			// Execute async task to restore instance state
 			if (mProgDialog == null || !mProgDialog.isShowing()) {
-				mProgDialog = new ProgressDialog(EDVolumeBrowserActivity.this);
+				mProgDialog = new ProgressDialog(VolumeBrowserActivity.this);
 				mProgDialog.setTitle(getString(R.string.loading_contents));
 				mProgDialog.setCancelable(false);
 				mProgDialog.show();
@@ -468,11 +468,11 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		switch (item.getItemId()) {
 		case R.id.volume_browser_menu_import:
 			Intent startFileChooser = new Intent(this,
-					EDFileChooserActivity.class);
+					FileChooserActivity.class);
 
 			Bundle fileChooserParams = new Bundle();
-			fileChooserParams.putInt(EDFileChooserActivity.MODE_KEY,
-					EDFileChooserActivity.FILE_PICKER_MODE);
+			fileChooserParams.putInt(FileChooserActivity.MODE_KEY,
+					FileChooserActivity.FILE_PICKER_MODE);
 			startFileChooser.putExtras(fileChooserParams);
 
 			startActivityForResult(startFileChooser, PICK_FILE_REQUEST);
@@ -495,7 +495,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		case android.R.id.home:
 			if (mCurEncFSDir == mVolume.getRootDir()) {
 				// Go back to volume list
-				Intent intent = new Intent(this, EDVolumeListActivity.class);
+				Intent intent = new Intent(this, VolumeListActivity.class);
 				intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 				startActivity(intent);
 			} else {
@@ -518,7 +518,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
 			if (mCurEncFSDir == mVolume.getRootDir()) {
 				// Go back to volume list
-				Intent intent = new Intent(this, EDVolumeListActivity.class);
+				Intent intent = new Intent(this, VolumeListActivity.class);
 				intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 				startActivity(intent);
 			} else {
@@ -729,7 +729,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		if (position == 0) {
 			return;
 		}
-		EDFileChooserItem selected = mAdapter.getItem(position - 1);
+		FileChooserItem selected = mAdapter.getItem(position - 1);
 
 		if (selected.isDirectory()) {
 			if (selected.getName().equals("..")) {
@@ -822,13 +822,12 @@ public class EDVolumeBrowserActivity extends ListActivity {
 			mOpenFile = mSelectedFile.getFile();
 			mOpenFileName = mOpenFile.getName();
 
-			Intent startFileExport = new Intent(this,
-					EDFileChooserActivity.class);
+			Intent startFileExport = new Intent(this, FileChooserActivity.class);
 
 			Bundle exportFileParams = new Bundle();
-			exportFileParams.putInt(EDFileChooserActivity.MODE_KEY,
-					EDFileChooserActivity.EXPORT_FILE_MODE);
-			exportFileParams.putString(EDFileChooserActivity.EXPORT_FILE_KEY,
+			exportFileParams.putInt(FileChooserActivity.MODE_KEY,
+					FileChooserActivity.EXPORT_FILE_MODE);
+			exportFileParams.putString(FileChooserActivity.EXPORT_FILE_KEY,
 					mSelectedFile.getName());
 			startFileExport.putExtras(exportFileParams);
 
@@ -893,7 +892,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		case PICK_FILE_REQUEST:
 			if (resultCode == Activity.RESULT_OK) {
 				String result = data.getExtras().getString(
-						EDFileChooserActivity.RESULT_KEY);
+						FileChooserActivity.RESULT_KEY);
 				String importPath = new File(
 						Environment.getExternalStorageDirectory(), result)
 						.getAbsolutePath();
@@ -912,7 +911,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		case EXPORT_FILE_REQUEST:
 			if (resultCode == Activity.RESULT_OK) {
 				String result = data.getExtras().getString(
-						EDFileChooserActivity.RESULT_KEY);
+						FileChooserActivity.RESULT_KEY);
 				String exportPath = new File(
 						Environment.getExternalStorageDirectory(), result)
 						.getAbsolutePath();
@@ -949,7 +948,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 	// Bail out to the volume list
 	private void exitToVolumeList() {
-		Intent intent = new Intent(this, EDVolumeListActivity.class);
+		Intent intent = new Intent(this, VolumeListActivity.class);
 		intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		startActivity(intent);
 		finish();
@@ -975,7 +974,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			curDir = mVolume.getFile(dir.getParentPath());
 		} catch (Exception e) {
-			EDLogger.logException(TAG, e);
+			Logger.logException(TAG, e);
 			return new Stack<EncFSFile>();
 		}
 
@@ -990,7 +989,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 			try {
 				curDir = mVolume.getFile(curDir.getParentPath());
 			} catch (Exception e) {
-				EDLogger.logException(TAG, e);
+				Logger.logException(TAG, e);
 				return new Stack<EncFSFile>();
 			}
 		}
@@ -1036,7 +1035,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			childEncFSFiles = mCurEncFSDir.listFiles();
 		} catch (IOException e) {
-			EDLogger.logException(TAG, e);
+			Logger.logException(TAG, e);
 			mErrDialogText = "Unable to list files: " + e.getMessage();
 			showDialog(DIALOG_ERROR);
 			return;
@@ -1060,17 +1059,17 @@ public class EDVolumeBrowserActivity extends ListActivity {
 			}
 		});
 
-		List<EDFileChooserItem> directories = new ArrayList<EDFileChooserItem>();
-		List<EDFileChooserItem> files = new ArrayList<EDFileChooserItem>();
+		List<FileChooserItem> directories = new ArrayList<FileChooserItem>();
+		List<FileChooserItem> files = new ArrayList<FileChooserItem>();
 
 		for (EncFSFile file : childEncFSFiles) {
 			if (file.isDirectory()) {
-				directories.add(new EDFileChooserItem(file.getName(), true,
-						file, 0));
+				directories.add(new FileChooserItem(file.getName(), true, file,
+						0));
 			} else {
 				if (!file.getName().equals(EncFSVolume.CONFIG_FILE_NAME)) {
-					files.add(new EDFileChooserItem(file.getName(), false,
-							file, file.getLength()));
+					files.add(new FileChooserItem(file.getName(), false, file,
+							file.getLength()));
 				}
 			}
 		}
@@ -1090,12 +1089,12 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		 * navigation.
 		 */
 		if ((mActionBar == null) && (mCurEncFSDir != mVolume.getRootDir())) {
-			mCurFileList.add(0, new EDFileChooserItem("..", true, "", 0));
+			mCurFileList.add(0, new FileChooserItem("..", true, "", 0));
 		}
 
 		if (mAdapter == null) {
-			mAdapter = new EDFileChooserAdapter(this,
-					R.layout.file_chooser_item, mCurFileList);
+			mAdapter = new FileChooserAdapter(this, R.layout.file_chooser_item,
+					mCurFileList);
 
 			// Set list adapter from UI thread
 			runOnUiThread(new Runnable() {
@@ -1179,7 +1178,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 	// Create and show a progress dialog for the requested task ID
 	private void createProgressBarForTask(int taskId, String strArg) {
-		mProgDialog = new ProgressDialog(EDVolumeBrowserActivity.this);
+		mProgDialog = new ProgressDialog(VolumeBrowserActivity.this);
 		switch (taskId) {
 		case ASYNC_TASK_SYNC:
 			mProgDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
@@ -1261,7 +1260,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				os.close();
 			}
 		} catch (IOException e) {
-			EDLogger.logException(TAG, e);
+			Logger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			return false;
 		}
@@ -1275,7 +1274,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			efis = new EncFSFileInputStream(srcFile);
 		} catch (Exception e) {
-			EDLogger.logException(TAG, e);
+			Logger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			return false;
 		}
@@ -1284,7 +1283,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			fos = new FileOutputStream(dstFile);
 		} catch (FileNotFoundException e) {
-			EDLogger.logException(TAG, e);
+			Logger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			try {
 				efis.close();
@@ -1326,7 +1325,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				}
 			}
 		} catch (Exception e) {
-			EDLogger.logException(TAG, e);
+			Logger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			return false;
 		}
@@ -1339,7 +1338,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			fis = new FileInputStream(srcFile);
 		} catch (FileNotFoundException e) {
-			EDLogger.logException(TAG, e);
+			Logger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			return false;
 		}
@@ -1348,7 +1347,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 		try {
 			efos = new EncFSFileOutputStream(dstFile, srcFile.length());
 		} catch (Exception e) {
-			EDLogger.logException(TAG, e);
+			Logger.logException(TAG, e);
 			mErrDialogText = e.getMessage();
 			try {
 				fis.close();
@@ -1402,7 +1401,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 					task.incrementProgressBy(1);
 				}
 			} catch (Exception e) {
-				EDLogger.logException(TAG, e);
+				Logger.logException(TAG, e);
 				mErrDialogText = e.getMessage();
 				return false;
 			}
@@ -1431,11 +1430,11 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 			try {
 				// Replace the ListView with a ProgressBar
-				mProgBar = new ProgressBar(EDVolumeBrowserActivity.this, null,
+				mProgBar = new ProgressBar(VolumeBrowserActivity.this, null,
 						android.R.attr.progressBarStyleLarge);
 
 				// Set the layout to fill the screen
-				mListView = EDVolumeBrowserActivity.this.getListView();
+				mListView = VolumeBrowserActivity.this.getListView();
 				mLayout = (LinearLayout) mListView.getParent();
 				mLayout.setGravity(Gravity.CENTER);
 				mLayout.setLayoutParams(new FrameLayout.LayoutParams(
@@ -1509,7 +1508,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				try {
 					srcFile = mVolume.getFile(mOpenFilePath);
 				} catch (Exception e) {
-					EDLogger.logException(TAG, e);
+					Logger.logException(TAG, e);
 					exitToVolumeList();
 				}
 			}
@@ -1600,8 +1599,8 @@ public class EDVolumeBrowserActivity extends ListActivity {
 
 					mOrigModifiedDate = new Date(dstFile.lastModified());
 
-					String mimeType = EDFileUtils
-							.getMimeTypeFromFileName(dstFile.getName());
+					String mimeType = FileUtils.getMimeTypeFromFileName(dstFile
+							.getName());
 
 					// Launch viewer app
 					Intent openIntent = new Intent(Intent.ACTION_VIEW);
@@ -1659,7 +1658,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				try {
 					dstFile = mVolume.getFile(mOpenFilePath);
 				} catch (Exception e) {
-					EDLogger.logException(TAG, e);
+					Logger.logException(TAG, e);
 					exitToVolumeList();
 				}
 			}
@@ -1731,7 +1730,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 					dstFile = mVolume.createFile(dstPath);
 				}
 			} catch (Exception e) {
-				EDLogger.logException(TAG, e);
+				Logger.logException(TAG, e);
 				mErrDialogText = e.getMessage();
 				return false;
 			}
@@ -1786,7 +1785,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				if (mPasteMode == PASTE_OP_CUT) {
 					result = mVolume.movePath(mPasteFile.getPath(),
 							EncFSVolume.combinePath(mCurEncFSDir, mPasteFile),
-							new EDProgressListener(this));
+							new ProgressListener(this));
 				} else {
 					// If destination path exists, use a duplicate name
 					String combinedPath = EncFSVolume.combinePath(mCurEncFSDir,
@@ -1802,10 +1801,10 @@ public class EDVolumeBrowserActivity extends ListActivity {
 						} while (mVolume.pathExists(combinedPath));
 
 						result = mVolume.copyPath(mPasteFile.getPath(),
-								combinedPath, new EDProgressListener(this));
+								combinedPath, new ProgressListener(this));
 					} else {
 						result = mVolume.copyPath(mPasteFile.getPath(),
-								mCurEncFSDir.getPath(), new EDProgressListener(
+								mCurEncFSDir.getPath(), new ProgressListener(
 										this));
 					}
 				}
@@ -1827,7 +1826,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				if (e.getMessage() == null) {
 					mErrDialogText = getString(R.string.paste_fail);
 				} else {
-					EDLogger.logException(TAG, e);
+					Logger.logException(TAG, e);
 					mErrDialogText = e.getMessage();
 				}
 				return false;
@@ -1845,7 +1844,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				myDialog.dismiss();
 			}
 
-			EDVolumeBrowserActivity myActivity = (EDVolumeBrowserActivity) getActivity();
+			VolumeBrowserActivity myActivity = (VolumeBrowserActivity) getActivity();
 			myActivity.mPasteFile = null;
 			myActivity.mPasteMode = PASTE_OP_NONE;
 
@@ -1891,7 +1890,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 				try {
 					// boolean result = mSelectedFile.getFile().delete();
 					boolean result = mVolume.deletePath(mSelectedFile.getFile()
-							.getPath(), true, new EDProgressListener(this));
+							.getPath(), true, new ProgressListener(this));
 
 					if (result == false) {
 						mErrDialogText = String.format(
@@ -1900,7 +1899,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 						return false;
 					}
 				} catch (Exception e) {
-					EDLogger.logException(TAG, e);
+					Logger.logException(TAG, e);
 					mErrDialogText = e.getMessage();
 					return false;
 				}
@@ -1920,7 +1919,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 					boolean result = mVolume.movePath(
 							EncFSVolume.combinePath(mCurEncFSDir,
 									mSelectedFile.getName()), dstPath,
-							new EDProgressListener(this));
+							new ProgressListener(this));
 
 					if (result == false) {
 						mErrDialogText = String.format(
@@ -1929,7 +1928,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 						return false;
 					}
 				} catch (Exception e) {
-					EDLogger.logException(TAG, e);
+					Logger.logException(TAG, e);
 					mErrDialogText = e.getMessage();
 					return false;
 				}
@@ -1945,7 +1944,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 						return false;
 					}
 				} catch (Exception e) {
-					EDLogger.logException(TAG, e);
+					Logger.logException(TAG, e);
 					mErrDialogText = e.getMessage();
 					return false;
 				}
@@ -1999,7 +1998,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 							.getString(SAVED_CUR_DIR_PATH_KEY));
 				}
 			} catch (Exception e) {
-				EDLogger.logException(TAG, e);
+				Logger.logException(TAG, e);
 				exitToVolumeList();
 			}
 			mDirStack = getFileStackForEncFSDir(mCurEncFSDir);
@@ -2010,7 +2009,7 @@ public class EDVolumeBrowserActivity extends ListActivity {
 					mPasteFile = mVolume.getFile(savedInstanceState
 							.getString(SAVED_PASTE_FILE_PATH_KEY));
 				} catch (Exception e) {
-					EDLogger.logException(TAG, e);
+					Logger.logException(TAG, e);
 					exitToVolumeList();
 				}
 			}

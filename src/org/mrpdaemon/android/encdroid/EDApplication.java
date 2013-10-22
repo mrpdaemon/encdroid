@@ -29,26 +29,26 @@ public class EDApplication extends Application {
 	private final static String TAG = "EDApplication";
 
 	// Volume list
-	private List<EDVolume> volumeList;
+	private List<Volume> volumeList;
 
 	// DB helper
-	private EDDBHelper dbHelper;
+	private DBHelper dbHelper;
 
 	// Dropbox context
-	private EDDropbox mDropbox;
+	private DropboxAccount mDropbox;
 
 	// Whether action bar is available
 	private static boolean mActionBarAvailable;
 
 	// PBKDF2 provider
-	private EDNativePBKDF2Provider mNativePBKDF2Provider;
+	private NativePBKDF2Provider mNativePBKDF2Provider;
 
 	// Whether native PBKDF2 provider is available
 	private static boolean mNativePBKDF2ProviderAvailable;
 
 	static {
 		try {
-			EDActionBar.checkAvailable();
+			ActionBarHelper.checkAvailable();
 			mActionBarAvailable = true;
 			Log.d(TAG, "Action bar class is available");
 		} catch (Throwable t) {
@@ -57,7 +57,7 @@ public class EDApplication extends Application {
 		}
 
 		try {
-			EDNativePBKDF2Provider.checkAvailable();
+			NativePBKDF2Provider.checkAvailable();
 			mNativePBKDF2ProviderAvailable = true;
 			Log.d(TAG, "Native PBKDF2 provider is available");
 		} catch (Throwable t) {
@@ -75,12 +75,12 @@ public class EDApplication extends Application {
 	public void onCreate() {
 		super.onCreate();
 
-		this.dbHelper = new EDDBHelper(this);
+		this.dbHelper = new DBHelper(this);
 		this.volumeList = dbHelper.getVolumes();
-		this.mDropbox = new EDDropbox(this);
+		this.mDropbox = new DropboxAccount(this);
 
 		if (mNativePBKDF2ProviderAvailable) {
-			mNativePBKDF2Provider = new EDNativePBKDF2Provider();
+			mNativePBKDF2Provider = new NativePBKDF2Provider();
 		} else {
 			mNativePBKDF2Provider = null;
 		}
@@ -98,21 +98,21 @@ public class EDApplication extends Application {
 	/**
 	 * @return the volumeList
 	 */
-	public List<EDVolume> getVolumeList() {
+	public List<Volume> getVolumeList() {
 		return volumeList;
 	}
 
 	/**
 	 * @return the dbHelper
 	 */
-	public EDDBHelper getDbHelper() {
+	public DBHelper getDbHelper() {
 		return dbHelper;
 	}
 
 	/**
 	 * @return the dropbox context
 	 */
-	public EDDropbox getDropbox() {
+	public DropboxAccount getDropbox() {
 		return mDropbox;
 	}
 
@@ -126,7 +126,7 @@ public class EDApplication extends Application {
 	/**
 	 * @return the native PBKDF2 provider
 	 */
-	public EDNativePBKDF2Provider getNativePBKDF2Provider() {
+	public NativePBKDF2Provider getNativePBKDF2Provider() {
 		return mNativePBKDF2Provider;
 	}
 }

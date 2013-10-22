@@ -4,7 +4,7 @@ import org.mrpdaemon.sec.encfs.EncFSPBKDF2Provider;
 
 import android.util.Log;
 
-public class EDNativePBKDF2Provider extends EncFSPBKDF2Provider {
+public class NativePBKDF2Provider extends EncFSPBKDF2Provider {
 
 	static {
 		try {
@@ -24,7 +24,7 @@ public class EDNativePBKDF2Provider extends EncFSPBKDF2Provider {
 	@Override
 	public byte[] doPBKDF2(int passwordLen, String password, int saltLen,
 			byte[] salt, int iterations, int keyLen) {
-		Log.d("EDNativePBKDF2Provider", "Calling into native PBKDF2 function!");
+		Log.d("NativePBKDF2Provider", "Calling into native PBKDF2 function!");
 		return pbkdf2(passwordLen, password, saltLen, salt, iterations, keyLen);
 	}
 }

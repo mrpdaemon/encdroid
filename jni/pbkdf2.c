@@ -21,7 +21,7 @@
 #include <openssl/evp.h>
 
 jbyteArray
-Java_org_mrpdaemon_android_encdroid_EDNativePBKDF2Provider_pbkdf2(JNIEnv *env,
+Java_org_mrpdaemon_android_encdroid_NativePBKDF2Provider_pbkdf2(JNIEnv *env,
 		                                                          jobject jobj,
 		                                                          jint pwd_len,
 		                                                          jstring password,
