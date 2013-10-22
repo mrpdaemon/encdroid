@@ -4,7 +4,6 @@
 .settings
 bin
 gen
-graphics
 obj
 proguard.cfg
 proguard-project.txt
