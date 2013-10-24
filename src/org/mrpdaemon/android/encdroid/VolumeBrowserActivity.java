@@ -1040,7 +1040,14 @@ public class VolumeBrowserActivity extends ListActivity {
 		} catch (IOException e) {
 			Logger.logException(TAG, e);
 			mErrDialogText = "Unable to list files: " + e.getMessage();
-			showDialog(DIALOG_ERROR);
+
+			// Show error dialog from the UI thread
+			runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					showDialog(DIALOG_ERROR);
+				}
+			});
 			return;
 		}
 
