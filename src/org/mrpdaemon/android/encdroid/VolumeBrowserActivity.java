@@ -212,6 +212,7 @@ public class VolumeBrowserActivity extends ListActivity {
 		public EDFileObserver savedObserver;
 		public FileChooserItem savedSelectedFile;
 		public EDAsyncTask<Void, Void, Boolean> savedTask;
+		public Date savedOrigModifiedDate;
 	}
 
 	// Saved instance state for current EncFS directory
@@ -300,6 +301,7 @@ public class VolumeBrowserActivity extends ListActivity {
 			mEncfsVolume = mVolume.getVolume();
 			mFileObserver = restoreContext.savedObserver;
 			mSelectedFile = restoreContext.savedSelectedFile;
+			mOrigModifiedDate = restoreContext.savedOrigModifiedDate;
 			mAsyncTask = restoreContext.savedTask;
 
 			mSavedCurDirPath = savedInstanceState
@@ -367,6 +369,7 @@ public class VolumeBrowserActivity extends ListActivity {
 		restoreContext.savedVolume = mVolume;
 		restoreContext.savedObserver = mFileObserver;
 		restoreContext.savedSelectedFile = mSelectedFile;
+		restoreContext.savedOrigModifiedDate = mOrigModifiedDate;
 		if (mAsyncTask != null
 				&& mAsyncTask.getStatus() == AsyncTask.Status.RUNNING) {
 			// Clear progress bar so we don't leak it
