@@ -378,10 +378,10 @@ public class FileChooserActivity extends ListActivity {
 								+ getString(R.string.dropbox) + ")");
 					} else if (mFsType == EXT_SD_FS) {
 						setTitle(getString(R.string.menu_import_vol) + " ("
-								+ getString(R.string.fs_dialog_ext_sd) + ")");
+								+ getString(R.string.fs_name_ext_sd) + ")");
 					} else {
 						setTitle(getString(R.string.menu_import_vol) + " ("
-								+ getString(R.string.fs_dialog_local) + ")");
+								+ getString(R.string.fs_name_local) + ")");
 					}
 					break;
 				case FILE_PICKER_MODE:
@@ -397,10 +397,10 @@ public class FileChooserActivity extends ListActivity {
 								+ getString(R.string.dropbox) + ")");
 					} else if (mFsType == EXT_SD_FS) {
 						setTitle(getString(R.string.menu_create_vol) + " ("
-								+ getString(R.string.fs_dialog_ext_sd) + ")");
+								+ getString(R.string.fs_name_ext_sd) + ")");
 					} else {
 						setTitle(getString(R.string.menu_create_vol) + " ("
-								+ getString(R.string.fs_dialog_local) + ")");
+								+ getString(R.string.fs_name_local) + ")");
 					}
 					break;
 				}

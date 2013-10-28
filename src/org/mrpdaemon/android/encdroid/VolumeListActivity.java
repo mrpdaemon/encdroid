@@ -567,12 +567,12 @@ public class VolumeListActivity extends ListActivity {
 			CharSequence[] fsTypes;
 			if (extSd == true) {
 				fsTypes = new CharSequence[3];
-				fsTypes[0] = getString(R.string.fs_dialog_local);
+				fsTypes[0] = getString(R.string.fs_name_local);
 				fsTypes[1] = "Dropbox";
-				fsTypes[2] = getString(R.string.fs_dialog_ext_sd);
+				fsTypes[2] = getString(R.string.fs_name_ext_sd);
 			} else {
 				fsTypes = new CharSequence[2];
-				fsTypes[0] = getString(R.string.fs_dialog_local);
+				fsTypes[0] = getString(R.string.fs_name_local);
 				fsTypes[1] = "Dropbox";
 			}
 			alertBuilder.setTitle(getString(R.string.fs_type_dialog_title_str));

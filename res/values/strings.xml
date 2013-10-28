@@ -65,8 +65,8 @@
     <string name="menu_unlock_volume">Unlock Volume</string>
     <string name="menu_import">Import</string>
     <string name="fs_type_dialog_title_str">Choose volume location</string>
-    <string name="fs_dialog_local">Local</string>
-    <string name="fs_dialog_ext_sd">External SD</string>
+    <string name="fs_name_local">Local</string>
+    <string name="fs_name_ext_sd">External SD</string>
     <string name="menu_refresh">Refresh</string>
     <string name="dropbox_login_error">Failed to login to Dropbox account</string>
     <string name="accounts">Accounts</string>
