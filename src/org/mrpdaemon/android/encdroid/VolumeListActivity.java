@@ -273,14 +273,15 @@ public class VolumeListActivity extends ListActivity {
 	@Override
 	protected void onResume() {
 		super.onResume();
-		DropboxAccount dropbox = mApp.getDropbox();
 
-		if (dropbox.isLinkOrAuthInProgress()) {
-			boolean success = dropbox.resumeLinkOrAuth();
-
-			if (success == false) {
-				mErrDialogText = getString(R.string.dropbox_login_error);
-				showDialog(DIALOG_ERROR);
+		for (Account account : mApp.getAccountList()) {
+			if (account.isLinkOrAuthInProgress()) {
+				if (account.resumeLinkOrAuth() == false) {
+					mErrDialogText = String.format(
+							getString(R.string.account_login_error),
+							account.getName());
+					showDialog(DIALOG_ERROR);
+				}
 			}
 		}
 	}

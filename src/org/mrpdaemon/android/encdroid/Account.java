@@ -25,6 +25,12 @@ import android.content.Context;
 // Base class for all account types
 public abstract class Account {
 
+	// Return account name
+	public abstract String getName();
+	
+	// Return icon resource id for this account
+	public abstract int getIconResId();
+
 	// Whether the account is linked to any user
 	public abstract boolean isLinked();
 

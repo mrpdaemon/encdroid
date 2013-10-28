@@ -18,6 +18,7 @@
 
 package org.mrpdaemon.android.encdroid;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import android.app.Application;
@@ -36,6 +37,9 @@ public class EDApplication extends Application {
 
 	// Dropbox context
 	private DropboxAccount mDropbox;
+
+	// Account list
+	private ArrayList<Account> mAccountList;
 
 	// Whether action bar is available
 	private static boolean mActionBarAvailable;
@@ -78,6 +82,10 @@ public class EDApplication extends Application {
 		this.dbHelper = new DBHelper(this);
 		this.volumeList = dbHelper.getVolumes();
 		this.mDropbox = new DropboxAccount(this);
+		
+		// Create and populate list of accounts
+		this.mAccountList = new ArrayList<Account>();
+		mAccountList.add(mDropbox);
 
 		if (mNativePBKDF2ProviderAvailable) {
 			mNativePBKDF2Provider = new NativePBKDF2Provider();
@@ -114,6 +122,13 @@ public class EDApplication extends Application {
 	 */
 	public DropboxAccount getDropbox() {
 		return mDropbox;
+	}
+
+	/**
+	 * @return list of accounts
+	 */
+	public ArrayList<Account> getAccountList() {
+		return mAccountList;
 	}
 
 	/**

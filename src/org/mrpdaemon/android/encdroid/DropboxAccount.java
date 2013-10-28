@@ -89,6 +89,16 @@ public class DropboxAccount extends Account {
 	}
 
 	@Override
+	public String getName() {
+		return "Dropbox";
+	}
+	
+	@Override
+	public int getIconResId() {
+		return R.drawable.ic_dropbox;
+	}
+
+	@Override
 	public void startLinkOrAuth(Context context) {
 
 		AppKeyPair appKeyPair = new AppKeyPair(APP_KEY, APP_SECRET);

@@ -18,21 +18,17 @@
 
 package org.mrpdaemon.android.encdroid;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.ListActivity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.Button;
-import android.widget.TextView;
 
-public class AccountsActivity extends Activity {
+public class AccountsActivity extends ListActivity {
 
 	// Error dialog
 	private final static int DIALOG_ERROR = 0;
@@ -43,8 +39,8 @@ public class AccountsActivity extends Activity {
 	// Application object
 	private EDApplication mApp;
 
-	// Dropbox object
-	private DropboxAccount mDropbox;
+	// List adapter
+	private AccountListAdapter mAdapter;
 
 	// Action bar object
 	private ActionBarHelper mActionBar = null;
@@ -62,14 +58,25 @@ public class AccountsActivity extends Activity {
 		super.onCreate(savedInstanceState);
 
 		mApp = (EDApplication) getApplication();
-		mDropbox = mApp.getDropbox();
 
-		setContentView(R.layout.accounts);
+		setContentView(R.layout.account_list);
 		setTitle(getString(R.string.accounts));
 
 		if (mApp.isActionBarAvailable()) {
 			mActionBar = new ActionBarHelper(this);
 			mActionBar.setDisplayHomeAsUpEnabled(true);
+		}
+
+		refreshList();
+	}
+
+	private void refreshList() {
+		if (mAdapter == null) {
+			mAdapter = new AccountListAdapter(this, R.layout.account_list_item,
+					mApp.getAccountList());
+			this.setListAdapter(mAdapter);
+		} else {
+			mAdapter.notifyDataSetChanged();
 		}
 	}
 
@@ -144,47 +151,6 @@ public class AccountsActivity extends Activity {
 		return alertDialog;
 	}
 
-	private void fill() {
-
-		TextView dropboxStatus = (TextView) findViewById(R.id.accounts_dropbox_status);
-		String status;
-
-		if (mDropbox.isAuthenticated()) {
-			status = String.format(getString(R.string.account_logged_in),
-					mDropbox.getUserName());
-		} else if (mDropbox.isLinked()) {
-			status = String.format(getString(R.string.account_linked),
-					mDropbox.getUserName());
-		} else {
-			status = getString(R.string.account_not_linked);
-		}
-
-		dropboxStatus.setText(status);
-
-		Button accountButton = (Button) findViewById(R.id.accounts_button);
-
-		if (mDropbox.isLinked()) {
-			accountButton.setText(getString(R.string.account_unlink_btn_str));
-			accountButton.setOnClickListener(new OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					// Unlink the account
-					mDropbox.unLink();
-					fill();
-				}
-			});
-		} else {
-			accountButton.setText(getString(R.string.account_link_btn_str));
-			accountButton.setOnClickListener(new OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					// Start linking an account
-					mDropbox.startLinkOrAuth(AccountsActivity.this);
-				}
-			});
-		}
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -193,7 +159,7 @@ public class AccountsActivity extends Activity {
 	@Override
 	protected void onStart() {
 		super.onStart();
-		fill();
+		refreshList();
 	}
 
 	/*
@@ -204,14 +170,17 @@ public class AccountsActivity extends Activity {
 	@Override
 	protected void onResume() {
 		super.onResume();
-		if (mDropbox.isLinkOrAuthInProgress()) {
-			boolean success = mDropbox.resumeLinkOrAuth();
 
-			if (success == false) {
-				mErrDialogText = getString(R.string.dropbox_login_error);
-				showDialog(DIALOG_ERROR);
-			} else {
-				fill();
+		for (Account account : mApp.getAccountList()) {
+			if (account.isLinkOrAuthInProgress()) {
+				if (account.resumeLinkOrAuth() == true) {
+					refreshList();
+				} else {
+					mErrDialogText = String.format(
+							getString(R.string.account_login_error),
+							account.getName());
+					showDialog(DIALOG_ERROR);
+				}
 			}
 		}
 	}

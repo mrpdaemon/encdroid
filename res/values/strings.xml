@@ -68,7 +68,7 @@
     <string name="fs_name_local">Local</string>
     <string name="fs_name_ext_sd">External SD</string>
     <string name="menu_refresh">Refresh</string>
-    <string name="dropbox_login_error">Failed to login to Dropbox account</string>
+    <string name="account_login_error">Failed to login to %s account</string>
     <string name="accounts">Accounts</string>
     <string name="dropbox">Dropbox</string>
     <string name="account_status">Status:</string>
