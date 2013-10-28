@@ -18,6 +18,8 @@
 
 package org.mrpdaemon.android.encdroid;
 
+import org.mrpdaemon.sec.encfs.EncFSFileProvider;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -30,7 +32,7 @@ import com.dropbox.client2.session.AccessTokenPair;
 import com.dropbox.client2.session.AppKeyPair;
 import com.dropbox.client2.session.Session.AccessType;
 
-public class DropboxAccount {
+public class DropboxAccount extends Account {
 	// Dropbox app key
 	private final static String APP_KEY = "<YOUR APP KEY HERE>";
 
@@ -86,7 +88,8 @@ public class DropboxAccount {
 		linkInProgress = false;
 	}
 
-	public void startLinkorAuth(Context context) {
+	@Override
+	public void startLinkOrAuth(Context context) {
 
 		AppKeyPair appKeyPair = new AppKeyPair(APP_KEY, APP_SECRET);
 		AndroidAuthSession session;
@@ -118,7 +121,8 @@ public class DropboxAccount {
 		}
 	}
 
-	public boolean resumeLinking() {
+	@Override
+	public boolean resumeLinkOrAuth() {
 		AndroidAuthSession session = mApi.getSession();
 
 		if (session.authenticationSuccessful()) {
@@ -181,7 +185,8 @@ public class DropboxAccount {
 		}
 	}
 
-	public void unlink() {
+	@Override
+	public void unLink() {
 		if (linked) {
 			if (authenticated) {
 				mApi.getSession().unlink();
@@ -203,38 +208,28 @@ public class DropboxAccount {
 		Log.d(TAG, "Dropbox account unlinked");
 	}
 
-	/**
-	 * @return whether we're linked to a dropbox account
-	 */
+	@Override
 	public boolean isLinked() {
 		return linked;
 	}
 
-	/**
-	 * @return whether we're authenticated to the dropbox account
-	 */
+	@Override
 	public boolean isAuthenticated() {
 		return authenticated;
 	}
 
-	/**
-	 * @return whether we're in progress of linking or to a dropbox account
-	 */
-	public boolean isLinkInProgress() {
+	@Override
+	public boolean isLinkOrAuthInProgress() {
 		return linkInProgress;
 	}
 
-	/**
-	 * @return Dropbox API object
-	 */
-	public DropboxAPI<AndroidAuthSession> getApi() {
-		return mApi;
-	}
-
-	/**
-	 * @return the userName
-	 */
+	@Override
 	public String getUserName() {
 		return userName;
+	}
+
+	@Override
+	public EncFSFileProvider getFileProvider(String path) {
+		return new DropboxFileProvider(mApi, path);
 	}
 }

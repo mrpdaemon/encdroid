@@ -149,16 +149,14 @@ public class AccountsActivity extends Activity {
 		TextView dropboxStatus = (TextView) findViewById(R.id.accounts_dropbox_status);
 		String status;
 
-		if (mDropbox.isLinked()) {
+		if (mDropbox.isAuthenticated()) {
+			status = String.format(getString(R.string.account_logged_in),
+					mDropbox.getUserName());
+		} else if (mDropbox.isLinked()) {
 			status = String.format(getString(R.string.account_linked),
 					mDropbox.getUserName());
 		} else {
 			status = getString(R.string.account_not_linked);
-		}
-
-		if (mDropbox.isAuthenticated()) {
-			status = String.format(getString(R.string.account_logged_in),
-					mDropbox.getUserName());
 		}
 
 		dropboxStatus.setText(status);
@@ -171,7 +169,7 @@ public class AccountsActivity extends Activity {
 				@Override
 				public void onClick(View v) {
 					// Unlink the account
-					mDropbox.unlink();
+					mDropbox.unLink();
 					fill();
 				}
 			});
@@ -181,7 +179,7 @@ public class AccountsActivity extends Activity {
 				@Override
 				public void onClick(View v) {
 					// Start linking an account
-					mDropbox.startLinkorAuth(AccountsActivity.this);
+					mDropbox.startLinkOrAuth(AccountsActivity.this);
 				}
 			});
 		}
@@ -206,8 +204,8 @@ public class AccountsActivity extends Activity {
 	@Override
 	protected void onResume() {
 		super.onResume();
-		if (mDropbox.isLinkInProgress()) {
-			boolean success = mDropbox.resumeLinking();
+		if (mDropbox.isLinkOrAuthInProgress()) {
+			boolean success = mDropbox.resumeLinkOrAuth();
 
 			if (success == false) {
 				mErrDialogText = getString(R.string.dropbox_login_error);

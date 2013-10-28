@@ -275,8 +275,8 @@ public class VolumeListActivity extends ListActivity {
 		super.onResume();
 		DropboxAccount dropbox = mApp.getDropbox();
 
-		if (dropbox.isLinkInProgress()) {
-			boolean success = dropbox.resumeLinking();
+		if (dropbox.isLinkOrAuthInProgress()) {
+			boolean success = dropbox.resumeLinkOrAuth();
 
 			if (success == false) {
 				mErrDialogText = getString(R.string.dropbox_login_error);
@@ -595,7 +595,7 @@ public class VolumeListActivity extends ListActivity {
 								DropboxAccount dropbox = mApp.getDropbox();
 
 								if (!dropbox.isAuthenticated()) {
-									dropbox.startLinkorAuth(VolumeListActivity.this);
+									dropbox.startLinkOrAuth(VolumeListActivity.this);
 									if (!dropbox.isAuthenticated()) {
 										return;
 									}
@@ -661,7 +661,7 @@ public class VolumeListActivity extends ListActivity {
 									DropboxAccount dropbox = mApp.getDropbox();
 
 									if (!dropbox.isAuthenticated()) {
-										dropbox.startLinkorAuth(VolumeListActivity.this);
+										dropbox.startLinkOrAuth(VolumeListActivity.this);
 										if (!dropbox.isAuthenticated()) {
 											return;
 										}
@@ -869,7 +869,7 @@ public class VolumeListActivity extends ListActivity {
 			DropboxAccount dropbox = mApp.getDropbox();
 
 			if (!dropbox.isAuthenticated()) {
-				dropbox.startLinkorAuth(VolumeListActivity.this);
+				dropbox.startLinkOrAuth(VolumeListActivity.this);
 				if (!dropbox.isAuthenticated()) {
 					return;
 				}
@@ -928,7 +928,7 @@ public class VolumeListActivity extends ListActivity {
 			return new EncFSLocalFileProvider(new File(
 					Environment.getExternalStorageDirectory(), relPath));
 		case Volume.DROPBOX_VOLUME:
-			return new DropboxFileProvider(mApp.getDropbox().getApi(), relPath);
+			return mApp.getDropbox().getFileProvider(relPath);
 		case Volume.EXT_SD_VOLUME:
 			return new EncFSLocalFileProvider(new File(mPrefs.getString(
 					"ext_sd_location", "/mnt/external1"), relPath));

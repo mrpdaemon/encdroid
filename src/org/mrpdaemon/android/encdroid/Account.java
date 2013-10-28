@@ -20,24 +20,32 @@ package org.mrpdaemon.android.encdroid;
 
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 
+import android.content.Context;
+
 // Base class for all account types
 public abstract class Account {
+
+	// Whether the account is linked to any user
+	public abstract boolean isLinked();
 
 	// Whether the account is currently authenticated
 	public abstract boolean isAuthenticated();
 
-	// Start authenticating the account
-	public abstract void startAuth();
+	// Start linking and/or authenticating the account
+	public abstract void startLinkOrAuth(Context context);
 
-	// Whether authentication is currently in progress
-	public abstract boolean isAuthInProgress();
+	// Whether linking or authentication is currently in progress
+	public abstract boolean isLinkOrAuthInProgress();
 
-	// Resume authentication on return from another Activity
-	public abstract void resumeAuth();
+	// Resume linking or authentication on return from another Activity
+	public abstract boolean resumeLinkOrAuth();
+
+	// Unlink account from user and destroy all tokens
+	public abstract void unLink();
 
 	// Return the user name associated with this Account
 	public abstract String getUserName();
-	
+
 	// Return an EncFSFileProvider for this account at the given path
 	public abstract EncFSFileProvider getFileProvider(String path);
 }

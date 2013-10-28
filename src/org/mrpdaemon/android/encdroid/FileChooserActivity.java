@@ -171,10 +171,10 @@ public class FileChooserActivity extends ListActivity {
 			DropboxAccount dropbox = ((EDApplication) getApplication())
 					.getDropbox();
 
-			if (dropbox.isLinked()) {
+			if (dropbox.isAuthenticated()) {
 				// XXX: Use DropboxFileProvider.getRootPath() - pending
 				// encfs-java issue #37
-				mFileProvider = new DropboxFileProvider(dropbox.getApi(), "/");
+				mFileProvider = dropbox.getFileProvider("/");
 			} else {
 				returnFailure();
 			}

@@ -51,10 +51,10 @@ public abstract class FileSystem {
 	// Return a file provider for this file system at a given path
 	public EncFSFileProvider getFileProvider(String path) {
 		if (mAccount != null) {
-			if (mAccount.isAuthenticated()) {
+			if (mAccount.isLinked() && mAccount.isAuthenticated()) {
 				return mAccount.getFileProvider(path);
 			} else {
-				mAccount.startAuth();
+				mAccount.startLinkOrAuth(mContext);
 			}
 		}
 
