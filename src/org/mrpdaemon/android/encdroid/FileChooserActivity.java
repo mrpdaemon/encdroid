@@ -18,7 +18,6 @@
 
 package org.mrpdaemon.android.encdroid;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,7 +25,6 @@ import java.util.List;
 
 import org.mrpdaemon.sec.encfs.EncFSFileInfo;
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
-import org.mrpdaemon.sec.encfs.EncFSLocalFileProvider;
 import org.mrpdaemon.sec.encfs.EncFSVolume;
 
 import android.app.Activity;
@@ -39,7 +37,6 @@ import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -72,7 +69,7 @@ public class FileChooserActivity extends ListActivity {
 	public final static String EXPORT_FILE_KEY = "export_file";
 
 	// Parameter key for FS type
-	public final static String FS_TYPE_KEY = "fs_type";
+	public final static String FS_INDEX_KEY = "fs_index";
 
 	// Valid FS types
 	public final static int LOCAL_FS = 0;
@@ -106,8 +103,8 @@ public class FileChooserActivity extends ListActivity {
 	// Current directory
 	private String mCurrentDir;
 
-	// The underlying FS type for this chooser
-	private int mFsType;
+	// The underlying FS this chooser
+	private FileSystem mFileSystem;
 
 	// File provider
 	private EncFSFileProvider mFileProvider;
@@ -138,17 +135,21 @@ public class FileChooserActivity extends ListActivity {
 
 		setContentView(R.layout.file_chooser);
 
+		mApp = (EDApplication) getApplication();
+
 		if (savedInstanceState == null) {
 			// New activity creation
 			Bundle params = getIntent().getExtras();
 			mMode = params.getInt(MODE_KEY);
-			mFsType = params.getInt(FS_TYPE_KEY);
+			mFileSystem = mApp.getFileSystemList().get(
+					params.getInt(FS_INDEX_KEY));
 			mExportFileName = params.getString(EXPORT_FILE_KEY);
 			mCurrentDir = "/";
 		} else {
 			// Restoring previously killed activity
 			mMode = savedInstanceState.getInt(MODE_KEY);
-			mFsType = savedInstanceState.getInt(FS_TYPE_KEY);
+			mFileSystem = mApp.getFileSystemList().get(
+					savedInstanceState.getInt(FS_INDEX_KEY));
 			mExportFileName = savedInstanceState.getString(EXPORT_FILE_KEY);
 			mCurrentDir = savedInstanceState.getString(CUR_DIR_KEY);
 		}
@@ -158,37 +159,11 @@ public class FileChooserActivity extends ListActivity {
 		mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
 		// Instantiate the proper file provider
-		switch (mFsType) {
-		case LOCAL_FS:
-			mFileProvider = new EncFSLocalFileProvider(
-					Environment.getExternalStorageDirectory());
-			break;
-		case EXT_SD_FS:
-			mFileProvider = new EncFSLocalFileProvider(new File(
-					mPrefs.getString("ext_sd_location", "/mnt/external1")));
-			break;
-		case DROPBOX_FS:
-			DropboxAccount dropbox = ((EDApplication) getApplication())
-					.getDropbox();
-
-			if (dropbox.isAuthenticated()) {
-				// XXX: Use DropboxFileProvider.getRootPath() - pending
-				// encfs-java issue #37
-				mFileProvider = dropbox.getFileProvider("/");
-			} else {
-				returnFailure();
-			}
-
-			break;
-		default:
-			break;
-		}
+		mFileProvider = mFileSystem.getFileProvider("/");
 
 		launchFillTask();
 
 		registerForContextMenu(this.getListView());
-
-		mApp = (EDApplication) getApplication();
 
 		if (mApp.isActionBarAvailable()) {
 			mActionBar = new ActionBarHelper(this);
@@ -204,7 +179,7 @@ public class FileChooserActivity extends ListActivity {
 	@Override
 	protected void onSaveInstanceState(Bundle outState) {
 		outState.putInt(MODE_KEY, mMode);
-		outState.putInt(FS_TYPE_KEY, mFsType);
+		outState.putInt(FS_INDEX_KEY, mApp.getFSIndex(mFileSystem));
 		outState.putString(EXPORT_FILE_KEY, mExportFileName);
 		outState.putString(CUR_DIR_KEY, mCurrentDir);
 		super.onSaveInstanceState(outState);
@@ -349,12 +324,6 @@ public class FileChooserActivity extends ListActivity {
 		finish();
 	}
 
-	private void returnFailure() {
-		Intent intent = this.getIntent();
-		setResult(Activity.RESULT_FIRST_USER, intent);
-		finish();
-	}
-
 	private boolean fill() {
 
 		boolean configFileFound = false;
@@ -373,16 +342,8 @@ public class FileChooserActivity extends ListActivity {
 			public void run() {
 				switch (mMode) {
 				case VOLUME_PICKER_MODE:
-					if (mFsType == DROPBOX_FS) {
-						setTitle(getString(R.string.menu_import_vol) + " ("
-								+ getString(R.string.dropbox) + ")");
-					} else if (mFsType == EXT_SD_FS) {
-						setTitle(getString(R.string.menu_import_vol) + " ("
-								+ getString(R.string.fs_name_ext_sd) + ")");
-					} else {
-						setTitle(getString(R.string.menu_import_vol) + " ("
-								+ getString(R.string.fs_name_local) + ")");
-					}
+					setTitle(getString(R.string.menu_import_vol) + " ("
+							+ mFileSystem.getName() + ")");
 					break;
 				case FILE_PICKER_MODE:
 					setTitle(getString(R.string.menu_import_files));
@@ -392,16 +353,8 @@ public class FileChooserActivity extends ListActivity {
 							mExportFileName));
 					break;
 				case CREATE_VOLUME_MODE:
-					if (mFsType == DROPBOX_FS) {
-						setTitle(getString(R.string.menu_create_vol) + " ("
-								+ getString(R.string.dropbox) + ")");
-					} else if (mFsType == EXT_SD_FS) {
-						setTitle(getString(R.string.menu_create_vol) + " ("
-								+ getString(R.string.fs_name_ext_sd) + ")");
-					} else {
-						setTitle(getString(R.string.menu_create_vol) + " ("
-								+ getString(R.string.fs_name_local) + ")");
-					}
+					setTitle(getString(R.string.menu_create_vol) + " ("
+							+ mFileSystem.getName() + ")");
 					break;
 				}
 

@@ -36,4 +36,9 @@ public class DropboxFileSystem extends FileSystem {
 	public int getIconResId() {
 		return R.drawable.ic_dropbox;
 	}
+	
+	@Override
+	public String getPathPrefix() {
+		return "[Dropbox]:";
+	}
 }

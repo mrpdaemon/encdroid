@@ -21,10 +21,7 @@ package org.mrpdaemon.android.encdroid;
 import java.util.List;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.os.Environment;
-import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,15 +35,11 @@ public class VolumeListAdapter extends ArrayAdapter<Volume> {
 	private int resourceId;
 	List<Volume> items;
 
-	// Shared preferences
-	private SharedPreferences mPrefs = null;
-
 	public VolumeListAdapter(Context context, int resourceId, List<Volume> items) {
 		super(context, resourceId, items);
 		this.context = context;
 		this.resourceId = resourceId;
 		this.items = items;
-		this.mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 	}
 
 	public Volume getItem(int i) {
@@ -82,24 +75,9 @@ public class VolumeListAdapter extends ArrayAdapter<Volume> {
 			}
 
 			if (volumePath != null) {
-				switch (item.getType()) {
-				case Volume.LOCAL_VOLUME:
-					volumePath.setText(Environment
-							.getExternalStorageDirectory().getAbsolutePath()
-							+ item.getPath());
-					break;
-				case Volume.DROPBOX_VOLUME:
-					volumePath.setText("[Dropbox]:" + item.getPath());
-					break;
-				case Volume.EXT_SD_VOLUME:
-					volumePath.setText("["
-							+ context.getString(R.string.ext_sd_vol_prefix_str)
-							+ "]:" + item.getPath());
-					break;
-				default:
-					volumePath.setText(item.getPath());
-					break;
-				}
+				volumePath.setText(item.getFileSystem().getPathPrefix()
+						+ item.getPath());
+
 				if (!isEnabled(position)) {
 					volumePath.setTextColor(Color.LTGRAY);
 				} else {
@@ -129,11 +107,7 @@ public class VolumeListAdapter extends ArrayAdapter<Volume> {
 	public boolean isEnabled(int position) {
 		final Volume item = items.get(position);
 
-		if (item.getType() == Volume.EXT_SD_VOLUME) {
-			return mPrefs.getBoolean("ext_sd_enabled", false);
-		}
-
-		return true;
+		return item.getFileSystem().isEnabled();
 	}
 
 }

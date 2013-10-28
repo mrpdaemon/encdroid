@@ -41,6 +41,9 @@ public class EDApplication extends Application {
 	// Account list
 	private ArrayList<Account> mAccountList;
 
+	// Filesystem list
+	private ArrayList<FileSystem> mFileSystemList;
+
 	// Whether action bar is available
 	private static boolean mActionBarAvailable;
 
@@ -79,13 +82,20 @@ public class EDApplication extends Application {
 	public void onCreate() {
 		super.onCreate();
 
-		this.dbHelper = new DBHelper(this);
-		this.volumeList = dbHelper.getVolumes();
 		this.mDropbox = new DropboxAccount(this);
 
 		// Create and populate list of accounts
 		this.mAccountList = new ArrayList<Account>();
 		mAccountList.add(mDropbox);
+
+		// Create and populate list of file systems
+		this.mFileSystemList = new ArrayList<FileSystem>();
+		mFileSystemList.add(new LocalFileSystem(this));
+		mFileSystemList.add(new DropboxFileSystem(mDropbox, this));
+		mFileSystemList.add(new ExtSDFileSystem(this));
+
+		this.dbHelper = new DBHelper(this);
+		this.volumeList = dbHelper.getVolumes();
 
 		if (mNativePBKDF2ProviderAvailable) {
 			mNativePBKDF2Provider = new NativePBKDF2Provider();
@@ -129,6 +139,45 @@ public class EDApplication extends Application {
 	 */
 	public ArrayList<Account> getAccountList() {
 		return mAccountList;
+	}
+
+	/**
+	 * @return list of file systems
+	 */
+	public ArrayList<FileSystem> getFileSystemList() {
+		return mFileSystemList;
+	}
+
+	/**
+	 * @return index of the given FS
+	 */
+	public int getFSIndex(FileSystem fileSystem) {
+		int index = 0;
+
+		for (FileSystem fs : mFileSystemList) {
+			if (fs == fileSystem) {
+				return index;
+			}
+			index++;
+		}
+		
+		return -1;
+	}
+	
+	/**
+	 * @return index of the given FS by name
+	 */
+	public int getFSIndexByName(String fsName) {
+		int index = 0;
+
+		for (FileSystem fs : mFileSystemList) {
+			if (fs.getName().equals(fsName)) {
+				return index;
+			}
+			index++;
+		}
+		
+		return -1;
 	}
 
 	/**

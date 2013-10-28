@@ -45,6 +45,11 @@ public class LocalFileSystem extends FileSystem {
 	}
 
 	@Override
+	public String getPathPrefix() {
+		return Environment.getExternalStorageDirectory().getAbsolutePath();
+	}
+
+	@Override
 	public EncFSFileProvider getFileProvider(String path) {
 		return new EncFSLocalFileProvider(new File(
 				Environment.getExternalStorageDirectory(), path));

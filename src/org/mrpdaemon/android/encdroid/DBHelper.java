@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import android.content.ContentValues;
-import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -53,8 +52,13 @@ public class DBHelper extends SQLiteOpenHelper {
 
 	private static final String[] NO_ARGS = {};
 
-	public DBHelper(Context context) {
-		super(context, DB_NAME, null, DB_VERSION);
+	// Application object
+	private EDApplication mApp;
+
+	public DBHelper(EDApplication application) {
+		super(application, DB_NAME, null, DB_VERSION);
+
+		this.mApp = application;
 	}
 
 	@Override
@@ -80,7 +84,7 @@ public class DBHelper extends SQLiteOpenHelper {
 		values.clear();
 		values.put(DB_COL_NAME, volume.getName());
 		values.put(DB_COL_PATH, volume.getPath());
-		values.put(DB_COL_TYPE, volume.getType());
+		values.put(DB_COL_TYPE, mApp.getFSIndex(volume.getFileSystem()));
 
 		Log.d(TAG, "insertVolume() name: '" + volume.getName() + "' path: '"
 				+ volume.getPath() + "'");
@@ -172,12 +176,13 @@ public class DBHelper extends SQLiteOpenHelper {
 			do {
 				String volName = cursor.getString(nameColId);
 				String volPath = cursor.getString(pathColId);
-				int volType = cursor.getInt(typeColId);
+				int volFsIdx = cursor.getInt(typeColId);
 
 				Log.d(TAG, "getVolume() name: '" + volName + "' path: '"
 						+ volPath + "'");
 
-				Volume volume = new Volume(volName, volPath, volType);
+				Volume volume = new Volume(volName, volPath, mApp
+						.getFileSystemList().get(volFsIdx));
 
 				volumes.add(volume);
 			} while (cursor.moveToNext());

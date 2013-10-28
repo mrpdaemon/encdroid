@@ -49,6 +49,9 @@ public abstract class FileSystem {
 	// Return an icon resource for this file system
 	public abstract int getIconResId();
 
+	// Prefix to put in front of paths
+	public abstract String getPathPrefix();
+
 	// Return the account used with this file system
 	public Account getAccount() {
 		return mAccount;

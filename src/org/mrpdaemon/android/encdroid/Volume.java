@@ -22,19 +22,14 @@ import org.mrpdaemon.sec.encfs.EncFSVolume;
 
 public class Volume {
 
-	// Volume types
-	public final static int LOCAL_VOLUME = 0;
-	public final static int DROPBOX_VOLUME = 1;
-	public final static int EXT_SD_VOLUME = 2;
-
 	// Volume name
 	private String name;
 
 	// Volume path
 	private String path;
 
-	// Volume type
-	private int type;
+	// Volume file system
+	private FileSystem fileSystem;
 
 	// Whether volume is locked or not
 	private boolean isLocked;
@@ -42,11 +37,11 @@ public class Volume {
 	// EncFS volume associated with this volume
 	private EncFSVolume volume;
 
-	public Volume(String name, String path, int type) {
+	public Volume(String name, String path, FileSystem fileSystem) {
 		super();
 		this.name = name;
 		this.path = path;
-		this.type = type;
+		this.fileSystem = fileSystem;
 		this.isLocked = true;
 		this.volume = null;
 	}
@@ -92,8 +87,8 @@ public class Volume {
 	/**
 	 * @return the type
 	 */
-	public int getType() {
-		return type;
+	public FileSystem getFileSystem() {
+		return fileSystem;
 	}
 
 	/**

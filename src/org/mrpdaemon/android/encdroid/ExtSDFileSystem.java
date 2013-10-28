@@ -55,6 +55,11 @@ public class ExtSDFileSystem extends FileSystem {
 	}
 
 	@Override
+	public String getPathPrefix() {
+		return "[" + mContext.getString(R.string.ext_sd_vol_prefix_str) + "]:";
+	}
+
+	@Override
 	public EncFSFileProvider getFileProvider(String path) {
 		return new EncFSLocalFileProvider(new File(mPrefs.getString(
 				"ext_sd_location", "/mnt/external1"), path));
