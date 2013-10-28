@@ -37,6 +37,12 @@ public abstract class FileSystem {
 		this.mAccount = account;
 	}
 
+	// Whether this file system is enabled
+	public boolean isEnabled()
+	{
+		return true;
+	}
+
 	// Return the name of this file system
 	public abstract String getName();
 

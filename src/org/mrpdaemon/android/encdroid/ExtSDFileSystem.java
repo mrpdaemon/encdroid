@@ -30,8 +30,17 @@ import android.preference.PreferenceManager;
 // Class representing the internal SD card file system
 public class ExtSDFileSystem extends FileSystem {
 
+	SharedPreferences mPrefs;
+
 	public ExtSDFileSystem(Context context) {
 		super(null, context);
+
+		mPrefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+	}
+
+	@Override
+	public boolean isEnabled() {
+		return mPrefs.getBoolean("ext_sd_enabled", false);
 	}
 
 	@Override
@@ -47,10 +56,7 @@ public class ExtSDFileSystem extends FileSystem {
 
 	@Override
 	public EncFSFileProvider getFileProvider(String path) {
-		SharedPreferences prefs = PreferenceManager
-				.getDefaultSharedPreferences(mContext);
-
-		return new EncFSLocalFileProvider(new File(prefs.getString(
+		return new EncFSLocalFileProvider(new File(mPrefs.getString(
 				"ext_sd_location", "/mnt/external1"), path));
 	}
 }

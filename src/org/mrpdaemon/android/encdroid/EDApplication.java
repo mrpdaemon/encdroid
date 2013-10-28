@@ -82,7 +82,7 @@ public class EDApplication extends Application {
 		this.dbHelper = new DBHelper(this);
 		this.volumeList = dbHelper.getVolumes();
 		this.mDropbox = new DropboxAccount(this);
-		
+
 		// Create and populate list of accounts
 		this.mAccountList = new ArrayList<Account>();
 		mAccountList.add(mDropbox);
