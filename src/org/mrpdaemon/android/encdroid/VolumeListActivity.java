@@ -559,37 +559,12 @@ public class VolumeListActivity extends ListActivity {
 			});
 			break;
 		case DIALOG_FS_TYPE:
-			int numEnabledFileSystems = 0;
-
-			for (FileSystem fs : mApp.getFileSystemList()) {
-				if (fs.isEnabled() == true) {
-					numEnabledFileSystems++;
-				}
-			}
-
-			final CharSequence[] fsTypes = new CharSequence[numEnabledFileSystems];
-
-			int index = 0;
-			for (FileSystem fs : mApp.getFileSystemList()) {
-				if (fs.isEnabled()) {
-					fsTypes[index] = fs.getName();
-					index++;
-				}
-			}
-
 			alertBuilder.setTitle(getString(R.string.fs_type_dialog_title_str));
-			alertBuilder.setItems(fsTypes,
+			alertBuilder.setAdapter(new FSTypeListAdapter(this,
+					R.layout.fs_list_item, mApp.getFileSystemList()),
 					new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int item) {
-
-							int fsIndex = mApp.getFSIndexByName(fsTypes[item]
-									.toString());
-							if (fsIndex == -1) {
-								return;
-							}
-
-							FileSystem fs = mApp.getFileSystemList().get(
-									fsIndex);
+							FileSystem fs = mApp.getFileSystemList().get(item);
 
 							Account account = fs.getAccount();
 
@@ -605,11 +580,11 @@ public class VolumeListActivity extends ListActivity {
 							if (mVolumeOp == VOLUME_OP_IMPORT) {
 								launchFileChooser(
 										FileChooserActivity.VOLUME_PICKER_MODE,
-										fsIndex);
+										item);
 							} else {
 								launchFileChooser(
 										FileChooserActivity.CREATE_VOLUME_MODE,
-										fsIndex);
+										item);
 							}
 						}
 					});

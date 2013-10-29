@@ -45,7 +45,7 @@ public class ExtSDFileSystem extends FileSystem {
 
 	@Override
 	public String getName() {
-		return mContext.getString(R.string.fs_name_local);
+		return mContext.getString(R.string.fs_name_ext_sd);
 	}
 
 	@Override
