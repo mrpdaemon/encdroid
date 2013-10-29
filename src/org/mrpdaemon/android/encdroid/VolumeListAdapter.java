@@ -62,6 +62,8 @@ public class VolumeListAdapter extends ArrayAdapter<Volume> {
 					.findViewById(R.id.volume_list_item_name);
 			ImageView volumeIcon = (ImageView) row
 					.findViewById(R.id.volume_list_item_icon);
+			ImageView fsIcon = (ImageView) row
+					.findViewById(R.id.volume_list_fs_icon);
 			TextView volumePath = (TextView) row
 					.findViewById(R.id.volume_list_item_path);
 
@@ -97,6 +99,10 @@ public class VolumeListAdapter extends ArrayAdapter<Volume> {
 				} else {
 					volumeIcon.clearColorFilter();
 				}
+			}
+
+			if (fsIcon != null) {
+				fsIcon.setImageResource(item.getFileSystem().getIconResId());
 			}
 		}
 
