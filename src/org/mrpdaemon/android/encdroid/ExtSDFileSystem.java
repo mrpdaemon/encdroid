@@ -50,8 +50,7 @@ public class ExtSDFileSystem extends FileSystem {
 
 	@Override
 	public int getIconResId() {
-		// XXX: find an icon for external SD file system
-		return 0;
+		return R.drawable.ic_fs_ext_sd;
 	}
 
 	@Override
