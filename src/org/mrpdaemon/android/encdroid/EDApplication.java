@@ -35,9 +35,6 @@ public class EDApplication extends Application {
 	// DB helper
 	private DBHelper dbHelper;
 
-	// Dropbox context
-	private DropboxAccount mDropbox;
-
 	// Account list
 	private ArrayList<Account> mAccountList;
 
@@ -82,11 +79,11 @@ public class EDApplication extends Application {
 	public void onCreate() {
 		super.onCreate();
 
-		this.mDropbox = new DropboxAccount(this);
+		DropboxAccount dropboxAccount = new DropboxAccount(this);
 
 		// Create and populate list of accounts
 		this.mAccountList = new ArrayList<Account>();
-		mAccountList.add(mDropbox);
+		mAccountList.add(dropboxAccount);
 
 		/*
 		 * Create and populate list of file systems
@@ -97,7 +94,7 @@ public class EDApplication extends Application {
 		 */
 		this.mFileSystemList = new ArrayList<FileSystem>();
 		mFileSystemList.add(new LocalFileSystem(this));
-		mFileSystemList.add(new DropboxFileSystem(mDropbox, this));
+		mFileSystemList.add(new DropboxFileSystem(dropboxAccount, this));
 		mFileSystemList.add(new ExtSDFileSystem(this));
 
 		this.dbHelper = new DBHelper(this);
@@ -131,13 +128,6 @@ public class EDApplication extends Application {
 	 */
 	public DBHelper getDbHelper() {
 		return dbHelper;
-	}
-
-	/**
-	 * @return the dropbox context
-	 */
-	public DropboxAccount getDropbox() {
-		return mDropbox;
 	}
 
 	/**
