@@ -88,7 +88,13 @@ public class EDApplication extends Application {
 		this.mAccountList = new ArrayList<Account>();
 		mAccountList.add(mDropbox);
 
-		// Create and populate list of file systems
+		/*
+		 * Create and populate list of file systems
+		 * 
+		 * Note that the precise ordering of these file systems must be
+		 * maintained in order to not break compatibility against databases
+		 * created with earlier versions.
+		 */
 		this.mFileSystemList = new ArrayList<FileSystem>();
 		mFileSystemList.add(new LocalFileSystem(this));
 		mFileSystemList.add(new DropboxFileSystem(mDropbox, this));
@@ -160,10 +166,10 @@ public class EDApplication extends Application {
 			}
 			index++;
 		}
-		
+
 		return -1;
 	}
-	
+
 	/**
 	 * @return index of the given FS by name
 	 */
@@ -176,7 +182,7 @@ public class EDApplication extends Application {
 			}
 			index++;
 		}
-		
+
 		return -1;
 	}
 
