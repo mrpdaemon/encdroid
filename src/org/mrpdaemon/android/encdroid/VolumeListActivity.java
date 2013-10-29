@@ -571,8 +571,10 @@ public class VolumeListActivity extends ListActivity {
 
 			int index = 0;
 			for (FileSystem fs : mApp.getFileSystemList()) {
-				fsTypes[index] = fs.getName();
-				index++;
+				if (fs.isEnabled()) {
+					fsTypes[index] = fs.getName();
+					index++;
+				}
 			}
 
 			alertBuilder.setTitle(getString(R.string.fs_type_dialog_title_str));
