@@ -263,11 +263,6 @@ public class VolumeBrowserActivity extends ListActivity {
 
 		registerForContextMenu(this.getListView());
 
-		if (mApp.isActionBarAvailable()) {
-			mActionBar = new ActionBarHelper(this);
-			mActionBar.setDisplayHomeAsUpEnabled(true);
-		}
-
 		mListHeader = new TextView(this);
 		mListHeader.setTypeface(null, Typeface.BOLD);
 		mListHeader.setTextSize(16);
@@ -359,6 +354,12 @@ public class VolumeBrowserActivity extends ListActivity {
 			} else {
 				new ActivityRestoreTask(null, savedInstanceState).execute();
 			}
+		}
+
+		if (mApp.isActionBarAvailable()) {
+			mActionBar = new ActionBarHelper(this);
+			mActionBar.setDisplayHomeAsUpEnabled(true);
+			mActionBar.setIcon(mVolume.getFileSystem().getIconResId());
 		}
 	}
 

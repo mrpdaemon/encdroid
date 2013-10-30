@@ -168,6 +168,7 @@ public class FileChooserActivity extends ListActivity {
 		if (mApp.isActionBarAvailable()) {
 			mActionBar = new ActionBarHelper(this);
 			mActionBar.setDisplayHomeAsUpEnabled(true);
+			mActionBar.setIcon(mFileSystem.getIconResId());
 		}
 
 		mListHeader = new TextView(this);

@@ -49,6 +49,11 @@ public class ActionBarHelper {
 	}
 
 	@SuppressLint("NewApi")
+	public void setIcon(int icon) {
+		mActionBar.setIcon(icon);
+	}
+
+	@SuppressLint("NewApi")
 	public void invalidateOptionsMenu(Activity activity) {
 		activity.invalidateOptionsMenu();
 	}
