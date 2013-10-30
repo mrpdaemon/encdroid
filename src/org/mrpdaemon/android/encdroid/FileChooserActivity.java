@@ -337,8 +337,7 @@ public class FileChooserActivity extends ListActivity {
 			public void run() {
 				switch (mMode) {
 				case VOLUME_PICKER_MODE:
-					setTitle(getString(R.string.menu_import_vol) + " ("
-							+ mFileSystem.getName() + ")");
+					setTitle(getString(R.string.menu_import_vol));
 					break;
 				case FILE_PICKER_MODE:
 					setTitle(getString(R.string.menu_import_files));
@@ -348,8 +347,7 @@ public class FileChooserActivity extends ListActivity {
 							mExportFileName));
 					break;
 				case CREATE_VOLUME_MODE:
-					setTitle(getString(R.string.menu_create_vol) + " ("
-							+ mFileSystem.getName() + ")");
+					setTitle(getString(R.string.menu_create_vol));
 					break;
 				}
 
