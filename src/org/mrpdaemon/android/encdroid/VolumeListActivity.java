@@ -173,8 +173,11 @@ public class VolumeListActivity extends ListActivity {
 			mCreateVolumeName = savedInstanceState
 					.getString(SAVED_CREATE_VOL_NAME_KEY);
 			mVolumeOp = savedInstanceState.getInt(SAVED_VOL_OP_KEY);
-			mVolumeFileSystem = mApp.getFileSystemList().get(
-					savedInstanceState.getInt(SAVED_VOL_FS_IDX_KEY));
+
+			int volFsIndex = savedInstanceState.getInt(SAVED_VOL_FS_IDX_KEY);
+			if (volFsIndex != -1) {
+				mVolumeFileSystem = mApp.getFileSystemList().get(volFsIndex);
+			}
 
 			ActivityRestoreContext restoreContext = (ActivityRestoreContext) getLastNonConfigurationInstance();
 			if (restoreContext != null) {
