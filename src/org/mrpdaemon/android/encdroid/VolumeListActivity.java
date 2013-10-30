@@ -880,6 +880,7 @@ public class VolumeListActivity extends ListActivity {
 			this.cachedKey = cachedKey;
 		}
 
+		@SuppressWarnings("deprecation")
 		@SuppressLint("Wakelock")
 		@Override
 		protected EncFSVolume doInBackground(String... args) {
