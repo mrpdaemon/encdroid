@@ -41,9 +41,6 @@ public class EDApplication extends Application {
 	// Filesystem list
 	private ArrayList<FileSystem> mFileSystemList;
 
-	// Whether action bar is available
-	private static boolean mActionBarAvailable;
-
 	// PBKDF2 provider
 	private NativePBKDF2Provider mNativePBKDF2Provider;
 
@@ -51,15 +48,6 @@ public class EDApplication extends Application {
 	private static boolean mNativePBKDF2ProviderAvailable;
 
 	static {
-		try {
-			ActionBarHelper.checkAvailable();
-			mActionBarAvailable = true;
-			Log.d(TAG, "Action bar class is available");
-		} catch (Throwable t) {
-			mActionBarAvailable = false;
-			Log.d(TAG, "Action bar class is NOT unavailable");
-		}
-
 		try {
 			NativePBKDF2Provider.checkAvailable();
 			mNativePBKDF2ProviderAvailable = true;
@@ -107,13 +95,6 @@ public class EDApplication extends Application {
 		}
 
 		Log.d(TAG, "EDApplication initialized");
-	}
-
-	/**
-	 * @return whether action bar class is available
-	 */
-	public boolean isActionBarAvailable() {
-		return mActionBarAvailable;
 	}
 
 	/**

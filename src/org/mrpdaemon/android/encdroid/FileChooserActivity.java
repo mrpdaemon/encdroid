@@ -112,9 +112,6 @@ public class FileChooserActivity extends ListActivity {
 	// Application object
 	private EDApplication mApp;
 
-	// Action bar wrapper
-	private ActionBarHelper mActionBar = null;
-
 	// Text view for list header
 	private TextView mListHeader = null;
 
@@ -165,11 +162,8 @@ public class FileChooserActivity extends ListActivity {
 
 		registerForContextMenu(this.getListView());
 
-		if (mApp.isActionBarAvailable()) {
-			mActionBar = new ActionBarHelper(this);
-			mActionBar.setDisplayHomeAsUpEnabled(true);
-			mActionBar.setIcon(mFileSystem.getIconResId());
-		}
+		getActionBar().setDisplayHomeAsUpEnabled(true);
+		getActionBar().setIcon(mFileSystem.getIconResId());
 
 		mListHeader = new TextView(this);
 		mListHeader.setTypeface(null, Typeface.BOLD);
@@ -399,26 +393,6 @@ public class FileChooserActivity extends ListActivity {
 		mCurFileList.clear();
 		mCurFileList.addAll(directories);
 		mCurFileList.addAll(files);
-
-		/*
-		 * Add an item for the parent directory (..) in case where no ActionBar
-		 * is present (API < 11). With ActionBar we use the Up icon for
-		 * navigation.
-		 */
-		if ((mActionBar == null)
-				&& (!mCurrentDir.equalsIgnoreCase(mFileProvider
-						.getFilesystemRootPath()))) {
-			String parentPath;
-
-			if (mCurrentDir.lastIndexOf("/") == 0) {
-				parentPath = mFileProvider.getFilesystemRootPath();
-			} else {
-				parentPath = mCurrentDir.substring(0,
-						mCurrentDir.lastIndexOf("/"));
-			}
-
-			mCurFileList.add(0, new FileChooserItem("..", true, parentPath, 0));
-		}
 
 		if (mAdapter == null) {
 			mAdapter = new FileChooserAdapter(this, R.layout.file_chooser_item,
