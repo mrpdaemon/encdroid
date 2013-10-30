@@ -60,7 +60,7 @@ Since Dropbox API keys should be kept as a secret by each developer, this
 repository doesn't contain valid Dropbox API keys. In order to get Dropbox
 functionality working one must obtain their own Dropbox API keys through
 the [Dropbox developer website] (https://www.dropbox.com/developers) and then
-replace the stubs for APP_KEY and APP_SECRET in EDDropbox.java with their
+replace the stubs for APP_KEY and APP_SECRET in DropboxAccount.java with their
 own keys. If you are planning to contribute patches or pull requests to the
 project please make sure to NOT disclose your own API keys.
 
