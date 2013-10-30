@@ -1430,7 +1430,7 @@ public class VolumeBrowserActivity extends ListActivity {
 				mLayout = (LinearLayout) mListView.getParent();
 				mLayout.setGravity(Gravity.CENTER);
 				mLayout.setLayoutParams(new FrameLayout.LayoutParams(
-						LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
+						LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
 				// Set the ProgressBar in the center of the layout
 				LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
@@ -1465,7 +1465,7 @@ public class VolumeBrowserActivity extends ListActivity {
 			if (mProgBar != null) {
 				// Restore the layout parameters
 				mLayout.setLayoutParams(new FrameLayout.LayoutParams(
-						LayoutParams.FILL_PARENT, LayoutParams.WRAP_CONTENT));
+						LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 				mLayout.setGravity(Gravity.TOP);
 
 				// Remove the progress bar and replace it with the list view
