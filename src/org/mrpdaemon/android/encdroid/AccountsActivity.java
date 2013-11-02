@@ -42,9 +42,6 @@ public class AccountsActivity extends ListActivity {
 	// List adapter
 	private AccountListAdapter mAdapter;
 
-	// Action bar object
-	private ActionBarHelper mActionBar = null;
-
 	// Text for the error dialog
 	private String mErrDialogText = "";
 
@@ -61,11 +58,6 @@ public class AccountsActivity extends ListActivity {
 
 		setContentView(R.layout.account_list);
 		setTitle(getString(R.string.accounts));
-
-		if (mApp.isActionBarAvailable()) {
-			mActionBar = new ActionBarHelper(this);
-			mActionBar.setDisplayHomeAsUpEnabled(true);
-		}
 
 		refreshList();
 	}

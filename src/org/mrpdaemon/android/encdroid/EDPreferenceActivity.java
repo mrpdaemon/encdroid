@@ -35,9 +35,6 @@ public class EDPreferenceActivity extends PreferenceActivity implements
 	// Application object
 	private EDApplication mApp;
 
-	// Action bar object
-	private ActionBarHelper mActionBar = null;
-
 	// Logger tag
 	private final static String TAG = "EDPreferenceActivity";
 
@@ -48,11 +45,6 @@ public class EDPreferenceActivity extends PreferenceActivity implements
 		addPreferencesFromResource(R.layout.preferences);
 
 		mApp = (EDApplication) getApplication();
-
-		if (mApp.isActionBarAvailable()) {
-			mActionBar = new ActionBarHelper(this);
-			mActionBar.setDisplayHomeAsUpEnabled(true);
-		}
 
 		setTitle(getString(R.string.settings));
 

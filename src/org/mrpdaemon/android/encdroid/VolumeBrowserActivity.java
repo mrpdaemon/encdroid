@@ -200,9 +200,6 @@ public class VolumeBrowserActivity extends ListActivity {
 	// Whether external storage is writable
 	boolean mExternalStorageWriteable = false;
 
-	// Action bar wrapper
-	private ActionBarHelper mActionBar = null;
-
 	// Text view for list header
 	private TextView mListHeader = null;
 
@@ -262,11 +259,6 @@ public class VolumeBrowserActivity extends ListActivity {
 		setContentView(R.layout.file_chooser);
 
 		registerForContextMenu(this.getListView());
-
-		if (mApp.isActionBarAvailable()) {
-			mActionBar = new ActionBarHelper(this);
-			mActionBar.setDisplayHomeAsUpEnabled(true);
-		}
 
 		mListHeader = new TextView(this);
 		mListHeader.setTypeface(null, Typeface.BOLD);
@@ -793,10 +785,6 @@ public class VolumeBrowserActivity extends ListActivity {
 			mPasteFile = mSelectedFile.getFile();
 			mPasteMode = PASTE_OP_CUT;
 
-			if (mApp.isActionBarAvailable()) {
-				mActionBar.invalidateOptionsMenu(this);
-			}
-
 			// Show toast
 			Toast.makeText(
 					getApplicationContext(),
@@ -808,10 +796,6 @@ public class VolumeBrowserActivity extends ListActivity {
 			mSelectedFile = mAdapter.getItem((int) info.id);
 			mPasteFile = mSelectedFile.getFile();
 			mPasteMode = PASTE_OP_COPY;
-
-			if (mApp.isActionBarAvailable()) {
-				mActionBar.invalidateOptionsMenu(this);
-			}
 
 			// Show toast
 			Toast.makeText(
@@ -1093,12 +1077,8 @@ public class VolumeBrowserActivity extends ListActivity {
 		mCurFileList.addAll(directories);
 		mCurFileList.addAll(files);
 
-		/*
-		 * Add an item for the parent directory (..) in case where no ActionBar
-		 * is present (API < 11). With ActionBar we use the Up icon for
-		 * navigation.
-		 */
-		if ((mActionBar == null) && (mCurEncFSDir != mEncfsVolume.getRootDir())) {
+		// Add an item for the parent directory (..)
+		if (mCurEncFSDir != mEncfsVolume.getRootDir()) {
 			mCurFileList.add(0, new FileChooserItem("..", true, "", 0));
 		}
 
@@ -1857,10 +1837,6 @@ public class VolumeBrowserActivity extends ListActivity {
 			VolumeBrowserActivity myActivity = (VolumeBrowserActivity) getActivity();
 			myActivity.mPasteFile = null;
 			myActivity.mPasteMode = PASTE_OP_NONE;
-
-			if (mApp.isActionBarAvailable()) {
-				myActivity.mActionBar.invalidateOptionsMenu(myActivity);
-			}
 
 			if (!isCancelled()) {
 				if (result == true) {
