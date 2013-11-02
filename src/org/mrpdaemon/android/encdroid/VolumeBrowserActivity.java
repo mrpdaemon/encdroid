@@ -355,6 +355,9 @@ public class VolumeBrowserActivity extends ListActivity {
 
 		getActionBar().setDisplayHomeAsUpEnabled(true);
 		getActionBar().setIcon(mVolume.getFileSystem().getIconResId());
+
+		// Set title text
+		setTitle(mVolume.getName());
 	}
 
 	// Retain the Volume object through activity being killed
@@ -1048,8 +1051,6 @@ public class VolumeBrowserActivity extends ListActivity {
 		runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				setTitle(mVolume.getName());
-
 				if ((emptyDir == true)
 						&& (mCurEncFSDir == mEncfsVolume.getRootDir())) {
 					// Empty volume message
