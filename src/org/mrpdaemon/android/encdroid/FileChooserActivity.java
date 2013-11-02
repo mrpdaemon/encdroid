@@ -166,6 +166,25 @@ public class FileChooserActivity extends ListActivity {
 		mListHeader.setTypeface(null, Typeface.BOLD);
 		mListHeader.setTextSize(16);
 		this.getListView().addHeaderView(mListHeader);
+
+		// Set title text
+		switch (mMode) {
+		case VOLUME_PICKER_MODE:
+			setTitle(getString(R.string.menu_import_vol) + " ("
+					+ mFileSystem.getName() + ")");
+			break;
+		case FILE_PICKER_MODE:
+			setTitle(getString(R.string.menu_import_files));
+			break;
+		case EXPORT_FILE_MODE:
+			setTitle(String.format(getString(R.string.export_file),
+					mExportFileName));
+			break;
+		case CREATE_VOLUME_MODE:
+			setTitle(getString(R.string.menu_create_vol) + " ("
+					+ mFileSystem.getName() + ")");
+			break;
+		}
 	}
 
 	@Override
@@ -328,28 +347,10 @@ public class FileChooserActivity extends ListActivity {
 			return false;
 		}
 
-		// Set title from UI thread
+		// Set list header from UI thread
 		runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				switch (mMode) {
-				case VOLUME_PICKER_MODE:
-					setTitle(getString(R.string.menu_import_vol) + " ("
-							+ mFileSystem.getName() + ")");
-					break;
-				case FILE_PICKER_MODE:
-					setTitle(getString(R.string.menu_import_files));
-					break;
-				case EXPORT_FILE_MODE:
-					setTitle(String.format(getString(R.string.export_file),
-							mExportFileName));
-					break;
-				case CREATE_VOLUME_MODE:
-					setTitle(getString(R.string.menu_create_vol) + " ("
-							+ mFileSystem.getName() + ")");
-					break;
-				}
-
 				mListHeader.setText(mCurrentDir);
 			}
 		});
