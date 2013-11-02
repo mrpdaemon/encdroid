@@ -68,10 +68,12 @@ public class EDApplication extends Application {
 		super.onCreate();
 
 		DropboxAccount dropboxAccount = new DropboxAccount(this);
+		GoogleDriveAccount driveAccount = new GoogleDriveAccount(this);
 
 		// Create and populate list of accounts
 		this.mAccountList = new ArrayList<Account>();
 		mAccountList.add(dropboxAccount);
+		mAccountList.add(driveAccount);
 
 		/*
 		 * Create and populate list of file systems
@@ -84,6 +86,7 @@ public class EDApplication extends Application {
 		mFileSystemList.add(new LocalFileSystem(this));
 		mFileSystemList.add(new DropboxFileSystem(dropboxAccount, this));
 		mFileSystemList.add(new ExtSDFileSystem(this));
+		mFileSystemList.add(new GoogleDriveFileSystem(driveAccount, this));
 
 		this.dbHelper = new DBHelper(this);
 		this.volumeList = dbHelper.getVolumes();
