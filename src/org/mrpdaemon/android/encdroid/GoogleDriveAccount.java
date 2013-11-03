@@ -18,14 +18,38 @@
 
 package org.mrpdaemon.android.encdroid;
 
+import java.util.Arrays;
+
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.services.drive.DriveScopes;
+
+import android.accounts.AccountManager;
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.util.Log;
 
 public class GoogleDriveAccount extends Account {
 
+	static final int REQUEST_ACCOUNT_PICKER = 31;
+
+	// Logger tag
+	private final static String TAG = "GoogleDriveAccount";
+
+	// Whether we're linked to an account
+	private boolean linked;
+
+	// Whether link is in progress
+	private boolean linkInProgress;
+
+	// Account name
+	private String accountName = null;
+
 	public GoogleDriveAccount(EDApplication app) {
-		
+		linked = false;
+		linkInProgress = false;
 	}
 
 	@Override
@@ -41,8 +65,7 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public boolean isLinked() {
-		// TODO Auto-generated method stub
-		return false;
+		return linked;
 	}
 
 	@Override
@@ -53,14 +76,22 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public void startLinkOrAuth(Context context) {
-		// TODO Auto-generated method stub
+		GoogleAccountCredential credential = GoogleAccountCredential
+				.usingOAuth2(context, Arrays.asList(DriveScopes.DRIVE));
 
+		// Select account to link
+		if (linked == false) {
+			linkInProgress = true;
+			((Activity) context)
+					.startActivityForResult(
+							credential.newChooseAccountIntent(),
+							REQUEST_ACCOUNT_PICKER);
+		}
 	}
 
 	@Override
 	public boolean isLinkOrAuthInProgress() {
-		// TODO Auto-generated method stub
-		return false;
+		return linkInProgress;
 	}
 
 	@Override
@@ -77,12 +108,28 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public String getUserName() {
-		// TODO Auto-generated method stub
-		return null;
+		return accountName;
 	}
 
 	@Override
 	public EncFSFileProvider getFileProvider(String path) {
 		return new GoogleDriveFileProvider(path);
+	}
+
+	@Override
+	public boolean forwardActivityResult(int requestCode, int resultCode,
+			Intent data) {
+		switch (requestCode) {
+		case REQUEST_ACCOUNT_PICKER:
+			if (resultCode == Activity.RESULT_OK && data != null
+					&& data.getExtras() != null) {
+				accountName = data
+						.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+				if (accountName != null) {
+					linked = true;
+				}
+			}
+		}
+		return true;
 	}
 }
