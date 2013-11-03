@@ -21,6 +21,7 @@ package org.mrpdaemon.android.encdroid;
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.util.Log;
@@ -241,5 +242,12 @@ public class DropboxAccount extends Account {
 	@Override
 	public EncFSFileProvider getFileProvider(String path) {
 		return new DropboxFileProvider(mApi, path);
+	}
+
+	@Override
+	public boolean forwardActivityResult(int requestCode, int resultCode,
+			Intent data) {
+		// Not needed
+		return false;
 	}
 }
