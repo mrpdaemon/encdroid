@@ -164,7 +164,7 @@ public class GoogleDriveAccount extends Account {
 						@Override
 						public void run() {
 							try {
-								driveService.files().list().execute();
+								driveService.about().get().execute();
 								Log.v(TAG,
 										"Already authenticated to Google API");
 								authenticated = true;
