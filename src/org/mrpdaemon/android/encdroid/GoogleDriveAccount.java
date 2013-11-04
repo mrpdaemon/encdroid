@@ -18,11 +18,16 @@
 
 package org.mrpdaemon.android.encdroid;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 
+import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 
 import android.accounts.AccountManager;
@@ -34,6 +39,7 @@ import android.util.Log;
 public class GoogleDriveAccount extends Account {
 
 	static final int REQUEST_ACCOUNT_PICKER = 31;
+	static final int REQUEST_AUTH_TOKEN = 32;
 
 	// Logger tag
 	private final static String TAG = "GoogleDriveAccount";
@@ -44,12 +50,25 @@ public class GoogleDriveAccount extends Account {
 	// Whether link is in progress
 	private boolean linkInProgress;
 
+	// Whether we're authenticated
+	private boolean authenticated;
+
 	// Account name
 	private String accountName = null;
+
+	// Credential object
+	private GoogleAccountCredential credential = null;
+
+	// Drive API object
+	private Drive driveService = null;
+
+	// Context from which we're authenticating
+	private Context context = null;
 
 	public GoogleDriveAccount(EDApplication app) {
 		linked = false;
 		linkInProgress = false;
+		authenticated = false;
 	}
 
 	@Override
@@ -70,14 +89,15 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public boolean isAuthenticated() {
-		// TODO Auto-generated method stub
-		return false;
+		return authenticated;
 	}
 
 	@Override
 	public void startLinkOrAuth(Context context) {
-		GoogleAccountCredential credential = GoogleAccountCredential
-				.usingOAuth2(context, Arrays.asList(DriveScopes.DRIVE));
+		this.context = context.getApplicationContext();
+
+		credential = GoogleAccountCredential.usingOAuth2(this.context,
+				Arrays.asList(DriveScopes.DRIVE));
 
 		// Select account to link
 		if (linked == false) {
@@ -86,6 +106,8 @@ public class GoogleDriveAccount extends Account {
 					.startActivityForResult(
 							credential.newChooseAccountIntent(),
 							REQUEST_ACCOUNT_PICKER);
+		} else {
+			// XXX: get account name from database and proceed
 		}
 	}
 
@@ -96,8 +118,7 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public boolean resumeLinkOrAuth() {
-		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	@Override
@@ -113,7 +134,7 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public EncFSFileProvider getFileProvider(String path) {
-		return new GoogleDriveFileProvider(path);
+		return new GoogleDriveFileProvider(driveService, path);
 	}
 
 	@Override
@@ -127,9 +148,50 @@ public class GoogleDriveAccount extends Account {
 						.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
 				if (accountName != null) {
 					linked = true;
+
+					// XXX: write account name to database
+
+					credential.setSelectedAccountName(accountName);
+
+					driveService = new Drive.Builder(
+							AndroidHttp.newCompatibleTransport(),
+							new GsonFactory(), credential).build();
+
+					Log.v(TAG,
+							"Drive service created: " + driveService.toString());
+
+					Thread thread = new Thread(new Runnable() {
+						@Override
+						public void run() {
+							try {
+								driveService.files().list().execute();
+								Log.v(TAG,
+										"Already authenticated to Google API");
+								authenticated = true;
+							} catch (UserRecoverableAuthIOException e) {
+								((Activity) context).startActivityForResult(
+										e.getIntent(), REQUEST_AUTH_TOKEN);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+					});
+
+					thread.start();
+
+					return true;
 				}
 			}
+			break;
+		case REQUEST_AUTH_TOKEN:
+			if (resultCode == Activity.RESULT_OK) {
+				Log.v(TAG, "Successfully authenticated to Google API");
+				authenticated = true;
+				return true;
+			}
+			break;
 		}
-		return true;
+
+		return false;
 	}
 }
