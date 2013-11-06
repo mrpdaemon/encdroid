@@ -111,7 +111,7 @@ public class FileUtils {
 		String extension = getExtensionFromFileName(fileName);
 
 		if (extension != null) {
-			if (extension.equals("kdb")) {
+			if (extension.equals("kdb") || extension.equals("kdbx")) {
 				return R.drawable.ic_mimetype_kdb;
 			} else if (extension.equals("odp")) {
 				return R.drawable.ic_mimetype_presentation;
