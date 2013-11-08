@@ -719,8 +719,18 @@ public class VolumeListActivity extends ListActivity {
 				showDialog(DIALOG_VOL_CREATE);
 				break;
 			default:
-				Log.e(TAG, "File chooser called with unknown request code: "
-						+ requestCode);
+				// Assume it's from one of the account login activies
+				for (Account account : mApp.getAccountList()) {
+					if (account.isLinkOrAuthInProgress()) {
+						if (account.forwardActivityResult(requestCode,
+								resultCode, data) == false) {
+							mErrDialogText = String.format(
+									getString(R.string.account_login_error),
+									account.getName());
+							showDialog(DIALOG_ERROR);
+						}
+					}
+				}
 				break;
 			}
 		} else {
