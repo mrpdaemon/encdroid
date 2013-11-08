@@ -95,5 +95,6 @@
     <string name="ext_sd_location_pref_title_str">External SD location</string>
     <string name="ext_sd_location_pref_sum_str">Filesystem path of the external SD card</string>
     <string name="ext_sd_vol_prefix_str">External SD</string>
+    <string name="google_drive_login">Logged in to Google Drive</string>
 
 </resources>
