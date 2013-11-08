@@ -91,11 +91,10 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 
 	// Convert from a File to EncFSFileInfo
 	private EncFSFileInfo fileToEncFSFileInfo(String parentRelPath, File file) {
-		// XXX: fix date (not 0)
 		return new EncFSFileInfo(file.getTitle(), parentRelPath,
-				fileIsDirectory(file), 0, (file.getFileSize() != null) ? file
-						.getFileSize().longValue() : 0, true,
-				file.getEditable(), false);
+				fileIsDirectory(file), file.getModifiedDate().getValue(),
+				(file.getFileSize() != null) ? file.getFileSize().longValue()
+						: 0, true, file.getEditable(), false);
 	}
 
 	// Lookup the given path in the file ID cache
