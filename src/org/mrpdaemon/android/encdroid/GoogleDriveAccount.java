@@ -27,7 +27,6 @@ import com.google.android.gms.auth.GoogleAuthException;
 import com.google.android.gms.auth.UserRecoverableAuthException;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
-import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
@@ -36,13 +35,21 @@ import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.util.Log;
 import android.widget.Toast;
 
 public class GoogleDriveAccount extends Account {
 
-	static final int REQUEST_ACCOUNT_PICKER = 31;
-	static final int REQUEST_AUTH_TOKEN = 32;
+	// Activity request codes
+	public static final int REQUEST_ACCOUNT_PICKER = 31;
+	public static final int REQUEST_AUTH_TOKEN = 32;
+
+	// Preference keys
+	private final static String PREFS_KEY = "google_drive_prefs";
+	private final static String PREF_LINKED = "is_linked";
+	private final static String PREF_ACCOUNT_NAME = "user_name";
 
 	// Logger tag
 	private final static String TAG = "GoogleDriveAccount";
@@ -55,6 +62,9 @@ public class GoogleDriveAccount extends Account {
 
 	// Whether we're authenticated
 	private boolean authenticated;
+
+	// Saved preferences
+	private SharedPreferences mPrefs;
 
 	// Account name
 	private String accountName = null;
@@ -72,7 +82,14 @@ public class GoogleDriveAccount extends Account {
 	private Activity activity = null;
 
 	public GoogleDriveAccount(EDApplication app) {
-		linked = false;
+		mPrefs = app.getSharedPreferences(PREFS_KEY, 0);
+
+		// Figure out whether we're linked to an account
+		linked = mPrefs.getBoolean(PREF_LINKED, false);
+		if (linked) {
+			accountName = mPrefs.getString(PREF_ACCOUNT_NAME, null);
+		}
+
 		linkInProgress = false;
 		authenticated = false;
 	}
@@ -84,7 +101,7 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public int getIconResId() {
-		// TODO Auto-generated method stub
+		// XXX: fix icon to be shorter height wise
 		return R.drawable.ic_google_drive;
 	}
 
@@ -96,6 +113,42 @@ public class GoogleDriveAccount extends Account {
 	@Override
 	public boolean isAuthenticated() {
 		return authenticated;
+	}
+
+	// Create drive service
+	private void createDriveService(String accountName) {
+		credential.setSelectedAccountName(accountName);
+
+		driveService = new Drive.Builder(AndroidHttp.newCompatibleTransport(),
+				new GsonFactory(), credential).build();
+
+		Log.v(TAG, "Drive service created: " + driveService.toString());
+	}
+
+	// Kick off authentication thread
+	private void startAuthThread() {
+		Thread thread = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					credential.getToken();
+					Log.v(TAG, "Already authenticated to Google API");
+					showLoginToast();
+					authenticated = true;
+				} catch (UserRecoverableAuthException e) {
+					((Activity) appContext).startActivityForResult(
+							e.getIntent(), REQUEST_AUTH_TOKEN);
+				} catch (IOException e) {
+					// XXX: show error
+					e.printStackTrace();
+				} catch (GoogleAuthException e) {
+					// XXX: show error
+					e.printStackTrace();
+				}
+			}
+		});
+
+		thread.start();
 	}
 
 	@Override
@@ -112,7 +165,8 @@ public class GoogleDriveAccount extends Account {
 			activity.startActivityForResult(
 					credential.newChooseAccountIntent(), REQUEST_ACCOUNT_PICKER);
 		} else {
-			// XXX: get account name from database and proceed
+			createDriveService(accountName);
+			startAuthThread();
 		}
 	}
 
@@ -128,8 +182,19 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public void unLink() {
-		// TODO Auto-generated method stub
+		// Clear preferences
+		Editor edit = mPrefs.edit();
+		edit.clear();
+		edit.commit();
 
+		// Clear data
+		linkInProgress = false;
+		authenticated = false;
+		linked = false;
+		accountName = null;
+		driveService = null;
+
+		Log.d(TAG, "Google Drive account unlinked");
 	}
 
 	@Override
@@ -166,38 +231,15 @@ public class GoogleDriveAccount extends Account {
 				if (accountName != null) {
 					linked = true;
 
-					// XXX: write account name to database
+					// write account name / linked to database
+					Editor edit = mPrefs.edit();
+					edit.putBoolean(PREF_LINKED, true);
+					edit.putString(PREF_ACCOUNT_NAME, accountName);
+					edit.commit();
 
-					credential.setSelectedAccountName(accountName);
+					createDriveService(accountName);
 
-					driveService = new Drive.Builder(
-							AndroidHttp.newCompatibleTransport(),
-							new GsonFactory(), credential).build();
-
-					Log.v(TAG,
-							"Drive service created: " + driveService.toString());
-
-					Thread thread = new Thread(new Runnable() {
-						@Override
-						public void run() {
-							try {
-								credential.getToken();
-								Log.v(TAG,
-										"Already authenticated to Google API");
-								showLoginToast();
-								authenticated = true;
-							} catch (UserRecoverableAuthException e) {
-								((Activity) appContext).startActivityForResult(
-										e.getIntent(), REQUEST_AUTH_TOKEN);
-							} catch (IOException e) {
-								e.printStackTrace();
-							} catch (GoogleAuthException e) {
-								e.printStackTrace();
-							}
-						}
-					});
-
-					thread.start();
+					startAuthThread();
 
 					return true;
 				}
