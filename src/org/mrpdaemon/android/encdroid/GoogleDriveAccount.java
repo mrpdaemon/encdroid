@@ -23,6 +23,8 @@ import java.util.Arrays;
 
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 
+import com.google.android.gms.auth.GoogleAuthException;
+import com.google.android.gms.auth.UserRecoverableAuthException;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
@@ -179,15 +181,17 @@ public class GoogleDriveAccount extends Account {
 						@Override
 						public void run() {
 							try {
-								driveService.about().get().execute();
+								credential.getToken();
 								Log.v(TAG,
 										"Already authenticated to Google API");
 								showLoginToast();
 								authenticated = true;
-							} catch (UserRecoverableAuthIOException e) {
+							} catch (UserRecoverableAuthException e) {
 								((Activity) appContext).startActivityForResult(
 										e.getIntent(), REQUEST_AUTH_TOKEN);
 							} catch (IOException e) {
+								e.printStackTrace();
+							} catch (GoogleAuthException e) {
 								e.printStackTrace();
 							}
 						}
