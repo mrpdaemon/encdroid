@@ -30,6 +30,8 @@ import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 
 import android.util.Log;
 
+import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpResponse;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.Drive.Files;
 import com.google.api.services.drive.model.File;
@@ -63,10 +65,30 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 		}
 	}
 
+	// Generate parent path of a given relative path
+	private String parentPath(String relPath) {
+		String result = "/";
+
+		StringTokenizer st = new StringTokenizer(relPath, "/");
+		if (st.countTokens() <= 1) {
+			// Children of root
+			return result;
+		}
+
+		while (st.hasMoreTokens()) {
+			String token = st.nextToken();
+			if (st.hasMoreTokens()) {
+				result += token + "/";
+			}
+		}
+
+		return result;
+	}
+
 	// Convert from a File to EncFSFileInfo
-	private EncFSFileInfo fileToEncFSFileInfo(String parentPath, File file) {
+	private EncFSFileInfo fileToEncFSFileInfo(String parentRelPath, File file) {
 		// XXX: fix date (not 0)
-		return new EncFSFileInfo(file.getTitle(), parentPath,
+		return new EncFSFileInfo(file.getTitle(), parentRelPath,
 				fileIsDirectory(file), 0, (file.getFileSize() != null) ? file
 						.getFileSize().longValue() : 0, true,
 				file.getEditable(), false);
@@ -149,15 +171,23 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 	}
 
 	@Override
-	public boolean exists(String path) throws IOException {
-		// TODO Auto-generated method stub
-		return false;
+	public boolean exists(String relPath) throws IOException {
+		return (pathToFileId(absPath(relPath)) != null);
 	}
 
 	@Override
-	public EncFSFileInfo getFileInfo(String path) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+	public EncFSFileInfo getFileInfo(String relPath) throws IOException {
+		String fileId = pathToFileId(absPath(relPath));
+		if (fileId == null) {
+			return null;
+		}
+
+		File file = driveService.files().get(fileId).execute();
+		if (file == null) {
+			return null;
+		}
+
+		return fileToEncFSFileInfo(parentPath(relPath), file);
 	}
 
 	@Override
@@ -177,14 +207,14 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 	}
 
 	@Override
-	public List<EncFSFileInfo> listFiles(String path) throws IOException {
+	public List<EncFSFileInfo> listFiles(String relPath) throws IOException {
 		List<EncFSFileInfo> result = new ArrayList<EncFSFileInfo>();
 		List<File> apiResult = new ArrayList<File>();
 
 		// Get file ID for path
 		String fileId;
 		try {
-			fileId = pathToFileId(absPath(path));
+			fileId = pathToFileId(absPath(relPath));
 		} catch (IOException e) {
 			Log.e(TAG, "An error occurred: " + e.getMessage());
 			return result;
@@ -213,7 +243,7 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 				String mimeType = file.getMimeType();
 				if (fileIsDirectory(file)
 						|| !mimeType.startsWith("application/vnd.google-apps")) {
-					result.add(fileToEncFSFileInfo(path, file));
+					result.add(fileToEncFSFileInfo(relPath, file));
 				}
 			}
 		}
@@ -240,8 +270,23 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 	}
 
 	@Override
-	public InputStream openInputStream(String path) throws IOException {
-		// TODO Auto-generated method stub
+	public InputStream openInputStream(String relPath) throws IOException {
+
+		String fileId = pathToFileId(absPath(relPath));
+		if (fileId == null) {
+			return null;
+		}
+
+		File file = driveService.files().get(fileId).execute();
+
+		if (file.getDownloadUrl() != null && file.getDownloadUrl().length() > 0) {
+
+			HttpResponse resp = driveService.getRequestFactory()
+					.buildGetRequest(new GenericUrl(file.getDownloadUrl()))
+					.execute();
+			return resp.getContent();
+		}
+
 		return null;
 	}
 
