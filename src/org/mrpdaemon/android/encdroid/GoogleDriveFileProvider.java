@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -50,6 +51,9 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 
 	// Standard search filter
 	private static String searchFilter = " and trashed=false and hidden=false";
+
+	// File ID caching (absPath -> fileId)
+	private HashMap<String, String> fileIdCache;
 
 	// Generate absolute path for a given relative path
 	private String absPath(String relPath) {
@@ -94,19 +98,63 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 				file.getEditable(), false);
 	}
 
+	// Lookup the given path in the file ID cache
+	private String fileIdCacheLookup(String path) {
+		String cachedId = fileIdCache.get(path);
+		if (cachedId == null) {
+			Log.v(TAG, "Cache lookup for path: '" + path + "' failed");
+		} else {
+			Log.v(TAG, "Cache lookup for path: '" + path + " returning: '"
+					+ cachedId + "'");
+		}
+		return cachedId;
+	}
+
+	// Insert the given file ID to the cache
+	private void fileIdCacheInsert(String path, String fileId) {
+		Log.v(TAG, "Caching file ID: '" + fileId + "' for path '" + path + "'");
+		fileIdCache.put(path, fileId);
+	}
+
 	// Convert from a given path to file ID
 	private String pathToFileId(String path) throws IOException {
+
+		Log.v(TAG, "pathToFileId '" + path + "'");
 
 		// Root alias
 		if (path.equals("/")) {
 			return "root";
 		}
 
+		// Drop trailing / from non-root path
+		if (path.charAt(path.length() - 1) == '/') {
+			path = path.substring(0, path.length() - 1);
+			Log.v(TAG, "Clipped path to: '" + path + "'");
+		}
+
+		// Do cache lookup first
+		String cachedId = fileIdCacheLookup(path);
+		if (cachedId != null) {
+			return cachedId;
+		}
+
+		// Cache lookup failed, need to do API requests for each path element
 		StringTokenizer st = new StringTokenizer(path, "/");
 		String curFileId = "root";
+		String curPath = "";
 
 		while (st.hasMoreTokens()) {
 			String pathElement = st.nextToken();
+
+			// See if current path is in cache yet
+			curPath += "/" + pathElement;
+			cachedId = fileIdCacheLookup(curPath);
+			if (cachedId != null) {
+				curFileId = cachedId;
+				continue;
+			}
+
+			// Not in cache, do API requests to find pathElement
 			File curFile = driveService.files().get(curFileId).execute();
 
 			if (fileIsDirectory(curFile)) {
@@ -123,10 +171,12 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 						found = true;
 						curFileId = tmpFile.getId();
 						if (st.hasMoreTokens()) {
-							// Have more path elements
+							// Have more path elements, cache and continue
+							fileIdCacheInsert(curPath, curFileId);
 							break;
 						} else {
-							// Found the search target
+							// Found the search target, cache and return
+							fileIdCacheInsert(path, curFileId);
 							return curFileId;
 						}
 					}
@@ -139,6 +189,8 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 			} else {
 				// Better be the last element!
 				if (!st.hasMoreTokens()) {
+					// Cache and return
+					fileIdCacheInsert(path, curFileId);
 					return curFileId;
 				}
 			}
@@ -150,6 +202,7 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 	public GoogleDriveFileProvider(Drive driveService, String rootPath) {
 		this.driveService = driveService;
 		this.rootPath = rootPath;
+		this.fileIdCache = new HashMap<String, String>();
 	}
 
 	@Override
