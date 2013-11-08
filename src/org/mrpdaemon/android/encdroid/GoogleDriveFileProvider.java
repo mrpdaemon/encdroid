@@ -248,15 +248,24 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 		return "/";
 	}
 
-	@Override
-	public boolean isDirectory(String path) throws IOException {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
 	// Returns whether the given File is a directory
 	private boolean fileIsDirectory(File file) {
 		return file.getMimeType().equals("application/vnd.google-apps.folder");
+	}
+
+	@Override
+	public boolean isDirectory(String relPath) throws IOException {
+		String fileId = pathToFileId(absPath(relPath));
+		if (fileId == null) {
+			return false;
+		}
+
+		File file = driveService.files().get(fileId).execute();
+		if (file == null) {
+			return false;
+		}
+
+		return fileIsDirectory(file);
 	}
 
 	@Override
