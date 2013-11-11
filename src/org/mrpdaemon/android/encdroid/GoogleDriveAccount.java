@@ -81,40 +81,6 @@ public class GoogleDriveAccount extends Account {
 	// Activity calling into startLinkOrAuth
 	private Activity activity = null;
 
-	public GoogleDriveAccount(EDApplication app) {
-		mPrefs = app.getSharedPreferences(PREFS_KEY, 0);
-
-		// Figure out whether we're linked to an account
-		linked = mPrefs.getBoolean(PREF_LINKED, false);
-		if (linked) {
-			accountName = mPrefs.getString(PREF_ACCOUNT_NAME, null);
-		}
-
-		linkInProgress = false;
-		authenticated = false;
-	}
-
-	@Override
-	public String getName() {
-		return "Google Drive";
-	}
-
-	@Override
-	public int getIconResId() {
-		// XXX: fix icon to be shorter height wise
-		return R.drawable.ic_google_drive;
-	}
-
-	@Override
-	public boolean isLinked() {
-		return linked;
-	}
-
-	@Override
-	public boolean isAuthenticated() {
-		return authenticated;
-	}
-
 	// Create drive service
 	private void createDriveService(String accountName) {
 		credential.setSelectedAccountName(accountName);
@@ -123,6 +89,20 @@ public class GoogleDriveAccount extends Account {
 				new GsonFactory(), credential).build();
 
 		Log.v(TAG, "Drive service created: " + driveService.toString());
+	}
+
+	// Show toast when logged in
+	private void showLoginToast() {
+		if (activity != null) {
+			activity.runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					Toast.makeText(activity,
+							activity.getString(R.string.google_drive_login),
+							Toast.LENGTH_SHORT).show();
+				}
+			});
+		}
 	}
 
 	// Kick off authentication thread
@@ -151,13 +131,52 @@ public class GoogleDriveAccount extends Account {
 		thread.start();
 	}
 
+	public GoogleDriveAccount(EDApplication app) {
+		mPrefs = app.getSharedPreferences(PREFS_KEY, 0);
+
+		linkInProgress = false;
+		authenticated = false;
+
+		appContext = app.getApplicationContext();
+
+		credential = GoogleAccountCredential.usingOAuth2(appContext,
+				Arrays.asList(DriveScopes.DRIVE));
+
+		// Figure out whether we're linked to an account
+		linked = mPrefs.getBoolean(PREF_LINKED, false);
+		if (linked) {
+			accountName = mPrefs.getString(PREF_ACCOUNT_NAME, null);
+
+			// Kick off authentication thread
+			createDriveService(accountName);
+			startAuthThread();
+		}
+	}
+
+	@Override
+	public String getName() {
+		return "Google Drive";
+	}
+
+	@Override
+	public int getIconResId() {
+		// XXX: fix icon to be shorter height wise
+		return R.drawable.ic_google_drive;
+	}
+
+	@Override
+	public boolean isLinked() {
+		return linked;
+	}
+
+	@Override
+	public boolean isAuthenticated() {
+		return authenticated;
+	}
+
 	@Override
 	public void startLinkOrAuth(Context context) {
-		this.appContext = context.getApplicationContext();
 		this.activity = (Activity) context;
-
-		credential = GoogleAccountCredential.usingOAuth2(this.appContext,
-				Arrays.asList(DriveScopes.DRIVE));
 
 		// Select account to link
 		if (linked == false) {
@@ -205,18 +224,6 @@ public class GoogleDriveAccount extends Account {
 	@Override
 	public EncFSFileProvider getFileProvider(String path) {
 		return new GoogleDriveFileProvider(driveService, path);
-	}
-
-	// Show toast when logged in
-	private void showLoginToast() {
-		activity.runOnUiThread(new Runnable() {
-			@Override
-			public void run() {
-				Toast.makeText(activity,
-						activity.getString(R.string.google_drive_login),
-						Toast.LENGTH_SHORT).show();
-			}
-		});
 	}
 
 	@Override
