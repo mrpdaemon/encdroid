@@ -1,22 +1,64 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Creator: CorelDRAW X6 -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="509.08mm" height="440.97mm" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 133156 115341"
- xmlns:xlink="http://www.w3.org/1999/xlink">
- <defs>
-  <style type="text/css">
-   <![CDATA[
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xml:space="preserve"
+   width="1803.83"
+   height="1803.83"
+   version="1.1"
+   style="fill-rule:evenodd"
+   viewBox="0 0 133156.23 133156.22"
+   id="svg2"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="google_drive.svg"><metadata
+     id="metadata18"><rdf:RDF><cc:Work
+         rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" /></cc:Work></rdf:RDF></metadata><sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="640"
+     inkscape:window-height="480"
+     id="namedview16"
+     showgrid="false"
+     inkscape:zoom="0.15104076"
+     inkscape:cx="901.91339"
+     inkscape:cy="891.62288"
+     inkscape:window-x="235"
+     inkscape:window-y="351"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg2" /><defs
+     id="defs4"><style
+       type="text/css"
+       id="style6">
     .fil2 {fill:#11A861}
     .fil0 {fill:#3777E3}
     .fil1 {fill:#FFCF63}
-   ]]>
-  </style>
- </defs>
- <g id="Livello_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <polygon class="fil0" points="22194,115341 44385,76894 133156,76894 110963,115341 "/>
-  <polygon class="fil1" points="88772,76894 133156,76894 88772,0 44385,0 "/>
-  <polygon class="fil2" points="0,76894 22194,115341 66578,38447 44385,0 "/>
- </g>
-</svg>
+   </style></defs><g
+     id="Livello_x0020_1"
+     transform="translate(488.73309,9506.7604)"><metadata
+       id="CorelCorpID_0Corel-Layer" /><polygon
+       class="fil0"
+       points="110963,115341 22194,115341 44385,76894 133156,76894 "
+       id="polygon10"
+       style="fill:#3777e3" /><polygon
+       class="fil1"
+       points="44385,0 88772,76894 133156,76894 88772,0 "
+       id="polygon12"
+       style="fill:#ffcf63" /><polygon
+       class="fil2"
+       points="44385,0 0,76894 22194,115341 66578,38447 "
+       id="polygon14"
+       style="fill:#11a861" /></g></svg>
