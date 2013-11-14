@@ -240,8 +240,17 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 
 	@Override
 	public boolean delete(String path) throws IOException {
-		Log.e(TAG, "NOT IMPLEMENTED: delete");
-		return false;
+		String fileId = pathToFileId(absPath(path));
+		if (fileId == null) {
+			throw new IOException("Can't delete file: not found");
+		}
+
+		driveService.files().delete(fileId).execute();
+
+		// Get rid of cache entry
+		fileIdCacheDelete(absPath(path));
+
+		return true;
 	}
 
 	@Override
