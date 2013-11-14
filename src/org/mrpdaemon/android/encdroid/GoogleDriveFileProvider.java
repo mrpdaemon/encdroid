@@ -228,8 +228,46 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 
 	@Override
 	public boolean copy(String srcPath, String dstPath) throws IOException {
-		Log.e(TAG, "NOT IMPLEMENTED: copy");
-		return false;
+
+		Log.v(TAG, "Copy '" + srcPath + "' to '" + dstPath + "'");
+
+		// Make sure the destination path doesn't exist
+		if (exists(dstPath)) {
+			throw new IOException("Can't copy: destination already exists");
+		}
+
+		// Get fileId for srcPath
+		String fileId = pathToFileId(absPath(srcPath));
+		if (fileId == null) {
+			return false;
+		}
+		Log.v(TAG, "File ID for '" + absPath(srcPath) + "' is '" + fileId + "'");
+
+		// Get fileId of dstPath's parent
+		String dstParentFileId = pathToFileId(parentPath(absPath(dstPath)));
+		if (dstParentFileId == null) {
+			return false;
+		}
+		Log.v(TAG, "File ID for '" + parentPath(absPath(dstPath)) + "' is '"
+				+ dstParentFileId + "'");
+
+		File copiedFile = new File();
+		copiedFile.setTitle(lastPathElement(dstPath));
+
+		// Add dstParentFileId to parents
+		ParentReference parents = new ParentReference();
+		parents.setId(dstParentFileId);
+		ArrayList<ParentReference> parentList = new ArrayList<ParentReference>();
+		parentList.add(parents);
+		copiedFile.setParents(parentList);
+
+		// API request for the copy
+		driveService.files().copy(fileId, copiedFile).execute();
+
+		// Invalidate old file ID cache entry
+		fileIdCacheDelete(absPath(srcPath));
+
+		return true;
 	}
 
 	@Override
