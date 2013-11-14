@@ -231,9 +231,13 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 
 		Log.v(TAG, "Copy '" + srcPath + "' to '" + dstPath + "'");
 
-		// Make sure the destination path doesn't exist
+		/*
+		 * If destination path exists, delete it first. This is a workaround for
+		 * encfs-java behavior without chainedNameIV, the file is
+		 * touched/created before calling into this function.
+		 */
 		if (exists(dstPath)) {
-			throw new IOException("Can't copy: destination already exists");
+			delete(dstPath);
 		}
 
 		// Get fileId for srcPath
@@ -272,8 +276,37 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 
 	@Override
 	public EncFSFileInfo createFile(String path) throws IOException {
-		Log.e(TAG, "NOT IMPLEMENTED: createFile");
-		return null;
+
+		Log.v(TAG, "createFile '" + path + "'");
+
+		// Make sure the given path doesn't exist
+		if (exists(path)) {
+			throw new IOException("Can't create file: already exists");
+		}
+
+		// Get parent's file Id
+		String parentAbsPath = parentPath(absPath(path));
+		String parentFileId = pathToFileId(parentAbsPath);
+		if (parentFileId == null) {
+			Log.e(TAG, "Parent path '" + parentAbsPath + "' not found!");
+			return null;
+		}
+
+		// Create a new file
+		File newFile = new File();
+		newFile.setTitle(lastPathElement(path));
+
+		// Mark parent reference
+		ParentReference parentRef = new ParentReference();
+		parentRef.setId(parentFileId);
+		ArrayList<ParentReference> refList = new ArrayList<ParentReference>();
+		refList.add(parentRef);
+		newFile.setParents(refList);
+
+		// API request
+		File createdFile = driveService.files().insert(newFile).execute();
+
+		return fileToEncFSFileInfo(parentPath(path), createdFile);
 	}
 
 	@Override
