@@ -44,6 +44,9 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 	// Logger tag
 	private final static String TAG = "GoogleDriveFileProvider";
 
+	// Directory MIME type
+	public final static String DIRECTORY_MIME_TYPE = "application/vnd.google-apps.folder";
+
 	// Root path for this file provider
 	private String rootPath;
 
@@ -268,7 +271,7 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 
 	// Returns whether the given File is a directory
 	private boolean fileIsDirectory(File file) {
-		return file.getMimeType().equals("application/vnd.google-apps.folder");
+		return file.getMimeType().equals(DIRECTORY_MIME_TYPE);
 	}
 
 	@Override
@@ -333,8 +336,40 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 
 	@Override
 	public boolean mkdir(String path) throws IOException {
-		Log.e(TAG, "NOT IMPLEMENTED: mkdir");
-		return false;
+
+		Log.v(TAG, "mkdir '" + path + "'");
+
+		// Make sure the given path doesn't exist
+		if (exists(path)) {
+			throw new IOException("Can't create directory: already exists");
+		}
+
+		// Get parent's file Id
+		String parentAbsPath = parentPath(absPath(path));
+		String parentFileId = pathToFileId(parentAbsPath);
+		if (parentFileId == null) {
+			Log.e(TAG, "Parent path '" + parentAbsPath + "' not found!");
+			return false;
+		}
+
+		// Create a new file
+		File newFile = new File();
+		newFile.setTitle(lastPathElement(path));
+
+		// Mark parent reference
+		ParentReference parentRef = new ParentReference();
+		parentRef.setId(parentFileId);
+		ArrayList<ParentReference> refList = new ArrayList<ParentReference>();
+		refList.add(parentRef);
+		newFile.setParents(refList);
+
+		// Set mime type
+		newFile.setMimeType(DIRECTORY_MIME_TYPE);
+
+		// API request
+		driveService.files().insert(newFile).execute();
+
+		return true;
 	}
 
 	@Override
