@@ -37,6 +37,7 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.Drive.Files;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
+import com.google.api.services.drive.model.ParentReference;
 
 public class GoogleDriveFileProvider implements EncFSFileProvider {
 
@@ -69,11 +70,23 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 		}
 	}
 
-	// Generate parent path of a given relative path
-	private String parentPath(String relPath) {
+	// Return the last element of a given path
+	private String lastPathElement(String path) {
+		StringTokenizer st = new StringTokenizer(path, "/");
+
+		String token = "/";
+		while (st.hasMoreTokens()) {
+			token = st.nextToken();
+		}
+
+		return token;
+	}
+
+	// Generate parent path of a given path
+	private String parentPath(String path) {
 		String result = "/";
 
-		StringTokenizer st = new StringTokenizer(relPath, "/");
+		StringTokenizer st = new StringTokenizer(path, "/");
 		if (st.countTokens() <= 1) {
 			// Children of root
 			return result;
@@ -113,6 +126,12 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 	private void fileIdCacheInsert(String path, String fileId) {
 		Log.v(TAG, "Caching file ID: '" + fileId + "' for path '" + path + "'");
 		fileIdCache.put(path, fileId);
+	}
+
+	// Delete the cache entry for the given path
+	private void fileIdCacheDelete(String path) {
+		Log.v(TAG, "Deleting file ID cache entry for '" + path + "'");
+		fileIdCache.remove(path);
 	}
 
 	// Convert from a given path to file ID
@@ -206,19 +225,19 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 
 	@Override
 	public boolean copy(String srcPath, String dstPath) throws IOException {
-		// TODO Auto-generated method stub
+		Log.e(TAG, "NOT IMPLEMENTED: copy");
 		return false;
 	}
 
 	@Override
 	public EncFSFileInfo createFile(String path) throws IOException {
-		// TODO Auto-generated method stub
+		Log.e(TAG, "NOT IMPLEMENTED: createFile");
 		return null;
 	}
 
 	@Override
 	public boolean delete(String path) throws IOException {
-		// TODO Auto-generated method stub
+		Log.e(TAG, "NOT IMPLEMENTED: delete");
 		return false;
 	}
 
@@ -314,20 +333,89 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 
 	@Override
 	public boolean mkdir(String path) throws IOException {
-		// TODO Auto-generated method stub
+		Log.e(TAG, "NOT IMPLEMENTED: mkdir");
 		return false;
 	}
 
 	@Override
 	public boolean mkdirs(String path) throws IOException {
-		// TODO Auto-generated method stub
+		Log.e(TAG, "NOT IMPLEMENTED: mkdirs");
 		return false;
 	}
 
 	@Override
 	public boolean move(String srcPath, String dstPath) throws IOException {
-		// TODO Auto-generated method stub
-		return false;
+
+		Log.v(TAG, "Move '" + srcPath + "' to '" + dstPath + "'");
+
+		// Make sure the destination path doesn't exist
+		if (exists(dstPath)) {
+			throw new IOException("Can't move: destination already exists");
+		}
+
+		// Get fileId for srcPath
+		String fileId = pathToFileId(absPath(srcPath));
+		if (fileId == null) {
+			return false;
+		}
+		Log.v(TAG, "File ID for '" + absPath(srcPath) + "' is '" + fileId + "'");
+
+		// Get fileId of srcPath's parent
+		String srcParentFileId = pathToFileId(parentPath(absPath(srcPath)));
+		if (srcParentFileId == null) {
+			return false;
+		}
+		Log.v(TAG, "File ID for '" + parentPath(absPath(srcPath)) + "' is '"
+				+ srcParentFileId + "'");
+
+		// Get fileId of dstPath's parent
+		String dstParentFileId = pathToFileId(parentPath(absPath(dstPath)));
+		if (dstParentFileId == null) {
+			return false;
+		}
+		Log.v(TAG, "File ID for '" + parentPath(absPath(dstPath)) + "' is '"
+				+ dstParentFileId + "'");
+
+		// API request to add dstParentFileId to parents
+		ParentReference newParent = new ParentReference();
+		newParent.setId(dstParentFileId);
+		try {
+			ParentReference result = driveService.parents()
+					.insert(fileId, newParent).execute();
+			Log.v(TAG, "Insert returned " + result.toPrettyString());
+		} catch (IOException e) {
+			Log.e(TAG, "An error occurred: " + e.getMessage());
+			return false;
+		}
+
+		// API request to remove srcParentFileId from parents
+		try {
+			driveService.parents().delete(fileId, srcParentFileId).execute();
+		} catch (IOException e) {
+			Log.e(TAG, "An error occurred: " + e.getMessage());
+			return false;
+		}
+
+		// Rename file if needed
+		String newName = lastPathElement(dstPath);
+		if (!lastPathElement(srcPath).equals(newName)) {
+			Log.v(TAG, "Renaming '" + lastPathElement(srcPath) + "' to '"
+					+ newName + "'");
+			File file = driveService.files().get(fileId).execute();
+			file.setTitle(newName);
+
+			try {
+				driveService.files().update(fileId, file).execute();
+			} catch (IOException e) {
+				Log.e(TAG, "An error occurred: " + e.getMessage());
+				return false;
+			}
+		}
+
+		// Invalidate old file ID cache entry
+		fileIdCacheDelete(absPath(srcPath));
+
+		return true;
 	}
 
 	@Override
@@ -354,7 +442,7 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 	@Override
 	public OutputStream openOutputStream(String path, long length)
 			throws IOException {
-		// TODO Auto-generated method stub
+		Log.e(TAG, "NOT IMPLEMENTED: openOutputStream");
 		return null;
 	}
 
