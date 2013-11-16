@@ -274,16 +274,7 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 		return true;
 	}
 
-	@Override
-	public EncFSFileInfo createFile(String path) throws IOException {
-
-		Log.v(TAG, "createFile '" + path + "'");
-
-		// Make sure the given path doesn't exist
-		if (exists(path)) {
-			throw new IOException("Can't create file: already exists");
-		}
-
+	public File prepareFileForCreation(String path) throws IOException {
 		// Get parent's file Id
 		String parentAbsPath = parentPath(absPath(path));
 		String parentFileId = pathToFileId(parentAbsPath);
@@ -302,6 +293,21 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 		ArrayList<ParentReference> refList = new ArrayList<ParentReference>();
 		refList.add(parentRef);
 		newFile.setParents(refList);
+
+		return newFile;
+	}
+
+	@Override
+	public EncFSFileInfo createFile(String path) throws IOException {
+
+		Log.v(TAG, "createFile '" + path + "'");
+
+		// Make sure the given path doesn't exist
+		if (exists(path)) {
+			throw new IOException("Can't create file: already exists");
+		}
+
+		File newFile = prepareFileForCreation(path);
 
 		// API request
 		File createdFile = driveService.files().insert(newFile).execute();
@@ -554,11 +560,14 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 		return null;
 	}
 
+	public Drive getDriveService() {
+		return driveService;
+	}
+
 	@Override
 	public OutputStream openOutputStream(String path, long length)
 			throws IOException {
-		Log.e(TAG, "NOT IMPLEMENTED: openOutputStream");
-		return null;
+		return new GoogleDriveOutputStream(this, path, length);
 	}
 
 }
