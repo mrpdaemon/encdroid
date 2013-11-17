@@ -722,7 +722,8 @@ public class VolumeListActivity extends ListActivity {
 				// Assume it's from one of the account login activies
 				for (Account account : mApp.getAccountList()) {
 					if (account.isLinkOrAuthInProgress()) {
-						if (account.forwardActivityResult(requestCode,
+						if (account.forwardActivityResult(
+								VolumeListActivity.this, requestCode,
 								resultCode, data) == false) {
 							mErrDialogText = String.format(
 									getString(R.string.account_login_error),
