@@ -166,8 +166,8 @@ public class AccountsActivity extends ListActivity {
 
 		for (Account account : mApp.getAccountList()) {
 			if (account.isLinkOrAuthInProgress()) {
-				if (account
-						.forwardActivityResult(requestCode, resultCode, data) == true) {
+				if (account.forwardActivityResult(AccountsActivity.this,
+						requestCode, resultCode, data) == true) {
 					refreshList();
 				} else {
 					mErrDialogText = String.format(

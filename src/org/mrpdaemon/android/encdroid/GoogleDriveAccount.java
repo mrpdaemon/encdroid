@@ -75,12 +75,6 @@ public class GoogleDriveAccount extends Account {
 	// Drive API object
 	private Drive driveService = null;
 
-	// Application context from which we're authenticating
-	private Context appContext = null;
-
-	// Activity calling into startLinkOrAuth
-	private Activity activity = null;
-
 	// Create drive service
 	private void createDriveService(String accountName) {
 		credential.setSelectedAccountName(accountName);
@@ -92,7 +86,7 @@ public class GoogleDriveAccount extends Account {
 	}
 
 	// Show toast when logged in
-	private void showLoginToast() {
+	private void showLoginToast(final Activity activity) {
 		if (activity != null) {
 			activity.runOnUiThread(new Runnable() {
 				@Override
@@ -106,18 +100,20 @@ public class GoogleDriveAccount extends Account {
 	}
 
 	// Kick off authentication thread
-	private void startAuthThread() {
+	private void startAuthThread(final Activity activity) {
 		Thread thread = new Thread(new Runnable() {
 			@Override
 			public void run() {
 				try {
 					credential.getToken();
 					Log.v(TAG, "Already authenticated to Google API");
-					showLoginToast();
+					showLoginToast(activity);
 					authenticated = true;
 				} catch (UserRecoverableAuthException e) {
-					((Activity) appContext).startActivityForResult(
-							e.getIntent(), REQUEST_AUTH_TOKEN);
+					if (activity != null) {
+						activity.startActivityForResult(e.getIntent(),
+								REQUEST_AUTH_TOKEN);
+					}
 				} catch (IOException e) {
 					// XXX: show error
 					e.printStackTrace();
@@ -137,10 +133,8 @@ public class GoogleDriveAccount extends Account {
 		linkInProgress = false;
 		authenticated = false;
 
-		appContext = app.getApplicationContext();
-
-		credential = GoogleAccountCredential.usingOAuth2(appContext,
-				Arrays.asList(DriveScopes.DRIVE));
+		credential = GoogleAccountCredential.usingOAuth2(
+				app.getApplicationContext(), Arrays.asList(DriveScopes.DRIVE));
 
 		// Figure out whether we're linked to an account
 		linked = mPrefs.getBoolean(PREF_LINKED, false);
@@ -149,7 +143,7 @@ public class GoogleDriveAccount extends Account {
 
 			// Kick off authentication thread
 			createDriveService(accountName);
-			startAuthThread();
+			startAuthThread(null);
 		}
 	}
 
@@ -176,7 +170,7 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public void startLinkOrAuth(Context context) {
-		this.activity = (Activity) context;
+		Activity activity = (Activity) context;
 
 		// Select account to link
 		if (linked == false) {
@@ -185,7 +179,7 @@ public class GoogleDriveAccount extends Account {
 					credential.newChooseAccountIntent(), REQUEST_ACCOUNT_PICKER);
 		} else {
 			createDriveService(accountName);
-			startAuthThread();
+			startAuthThread(activity);
 		}
 	}
 
@@ -227,8 +221,8 @@ public class GoogleDriveAccount extends Account {
 	}
 
 	@Override
-	public boolean forwardActivityResult(int requestCode, int resultCode,
-			Intent data) {
+	public boolean forwardActivityResult(Activity origin, int requestCode,
+			int resultCode, Intent data) {
 		switch (requestCode) {
 		case REQUEST_ACCOUNT_PICKER:
 			if (resultCode == Activity.RESULT_OK && data != null
@@ -246,7 +240,7 @@ public class GoogleDriveAccount extends Account {
 
 					createDriveService(accountName);
 
-					startAuthThread();
+					startAuthThread(origin);
 
 					return true;
 				}
@@ -255,7 +249,7 @@ public class GoogleDriveAccount extends Account {
 		case REQUEST_AUTH_TOKEN:
 			if (resultCode == Activity.RESULT_OK) {
 				Log.v(TAG, "Successfully authenticated to Google API");
-				showLoginToast();
+				showLoginToast(origin);
 				authenticated = true;
 				return true;
 			}

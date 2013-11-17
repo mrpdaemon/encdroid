@@ -20,6 +20,7 @@ package org.mrpdaemon.android.encdroid;
 
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 
@@ -48,8 +49,8 @@ public abstract class Account {
 	public abstract boolean resumeLinkOrAuth();
 
 	// Forwarded activity result on return from another Activity
-	public abstract boolean forwardActivityResult(int requestCode,
-			int resultCode, final Intent data);
+	public abstract boolean forwardActivityResult(Activity origin,
+			int requestCode, int resultCode, final Intent data);
 
 	// Unlink account from user and destroy all tokens
 	public abstract void unLink();
