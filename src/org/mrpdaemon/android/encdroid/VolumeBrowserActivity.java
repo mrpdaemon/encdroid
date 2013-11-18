@@ -854,29 +854,37 @@ public class VolumeBrowserActivity extends ListActivity {
 
 		switch (requestCode) {
 		case VIEW_FILE_REQUEST:
-			// Don't need to watch any more
-			mFileObserver.stopWatching();
+			/*
+			 * Seems like it's possible to come here with mFileObserver == null,
+			 * possibly after spending a long time in a viewer app and the
+			 * Encdroid instance getting killed to reclaim memory. We'll just
+			 * ignore this activity result in that case.
+			 */
+			if (mFileObserver != null) {
+				// Don't need to watch any more
+				mFileObserver.stopWatching();
 
-			File dstFile = new File(mFileObserver.getPath());
+				File dstFile = new File(mFileObserver.getPath());
 
-			// If the file was modified we need to sync it back
-			Date newDate = new Date(dstFile.lastModified());
-			if (mFileObserver.wasModified()
-					|| (newDate.compareTo(mOrigModifiedDate) > 0)) {
-				// Sync file contents
-				try {
-					launchAsyncTask(ASYNC_TASK_SYNC, dstFile, mOpenFile);
-				} catch (Exception e) {
-					mErrDialogText = e.getMessage();
-					showDialog(DIALOG_ERROR);
+				// If the file was modified we need to sync it back
+				Date newDate = new Date(dstFile.lastModified());
+				if (mFileObserver.wasModified()
+						|| (newDate.compareTo(mOrigModifiedDate) > 0)) {
+					// Sync file contents
+					try {
+						launchAsyncTask(ASYNC_TASK_SYNC, dstFile, mOpenFile);
+					} catch (Exception e) {
+						mErrDialogText = e.getMessage();
+						showDialog(DIALOG_ERROR);
+					}
+				} else {
+					// File not modified, delete from SD
+					dstFile.delete();
 				}
-			} else {
-				// File not modified, delete from SD
-				dstFile.delete();
-			}
 
-			// Clean up reference to the file observer
-			mFileObserver = null;
+				// Clean up reference to the file observer
+				mFileObserver = null;
+			}
 
 			break;
 		case PICK_FILE_REQUEST:
