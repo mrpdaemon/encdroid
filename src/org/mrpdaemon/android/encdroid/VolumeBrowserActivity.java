@@ -68,7 +68,9 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -264,6 +266,20 @@ public class VolumeBrowserActivity extends ListActivity {
 		mListHeader.setTypeface(null, Typeface.BOLD);
 		mListHeader.setTextSize(16);
 		this.getListView().addHeaderView(mListHeader);
+
+		// Don't show the context menu for the list header
+		this.getListView().setOnItemLongClickListener(
+				new OnItemLongClickListener() {
+					@Override
+					public boolean onItemLongClick(AdapterView<?> adapterView,
+							View v, int position, long id) {
+						if (position != 0) {
+							VolumeBrowserActivity.this.getListView()
+									.showContextMenu();
+						}
+						return true;
+					}
+				});
 
 		if (savedInstanceState == null) {
 			// Activity being created for the first time
