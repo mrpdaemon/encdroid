@@ -68,7 +68,9 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -264,6 +266,20 @@ public class VolumeBrowserActivity extends ListActivity {
 		mListHeader.setTypeface(null, Typeface.BOLD);
 		mListHeader.setTextSize(16);
 		this.getListView().addHeaderView(mListHeader);
+
+		// Don't show the context menu for the list header
+		this.getListView().setOnItemLongClickListener(
+				new OnItemLongClickListener() {
+					@Override
+					public boolean onItemLongClick(AdapterView<?> adapterView,
+							View v, int position, long id) {
+						if (position != 0) {
+							VolumeBrowserActivity.this.getListView()
+									.showContextMenu();
+						}
+						return true;
+					}
+				});
 
 		if (savedInstanceState == null) {
 			// Activity being created for the first time
@@ -861,29 +877,37 @@ public class VolumeBrowserActivity extends ListActivity {
 
 		switch (requestCode) {
 		case VIEW_FILE_REQUEST:
-			// Don't need to watch any more
-			mFileObserver.stopWatching();
+			/*
+			 * Seems like it's possible to come here with mFileObserver == null,
+			 * possibly after spending a long time in a viewer app and the
+			 * Encdroid instance getting killed to reclaim memory. We'll just
+			 * ignore this activity result in that case.
+			 */
+			if (mFileObserver != null) {
+				// Don't need to watch any more
+				mFileObserver.stopWatching();
 
-			File dstFile = new File(mFileObserver.getPath());
+				File dstFile = new File(mFileObserver.getPath());
 
-			// If the file was modified we need to sync it back
-			Date newDate = new Date(dstFile.lastModified());
-			if (mFileObserver.wasModified()
-					|| (newDate.compareTo(mOrigModifiedDate) > 0)) {
-				// Sync file contents
-				try {
-					launchAsyncTask(ASYNC_TASK_SYNC, dstFile, mOpenFile);
-				} catch (Exception e) {
-					mErrDialogText = e.getMessage();
-					showDialog(DIALOG_ERROR);
+				// If the file was modified we need to sync it back
+				Date newDate = new Date(dstFile.lastModified());
+				if (mFileObserver.wasModified()
+						|| (newDate.compareTo(mOrigModifiedDate) > 0)) {
+					// Sync file contents
+					try {
+						launchAsyncTask(ASYNC_TASK_SYNC, dstFile, mOpenFile);
+					} catch (Exception e) {
+						mErrDialogText = e.getMessage();
+						showDialog(DIALOG_ERROR);
+					}
+				} else {
+					// File not modified, delete from SD
+					dstFile.delete();
 				}
-			} else {
-				// File not modified, delete from SD
-				dstFile.delete();
-			}
 
-			// Clean up reference to the file observer
-			mFileObserver = null;
+				// Clean up reference to the file observer
+				mFileObserver = null;
+			}
 
 			break;
 		case PICK_FILE_REQUEST:

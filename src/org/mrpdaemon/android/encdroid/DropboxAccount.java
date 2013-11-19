@@ -20,7 +20,9 @@ package org.mrpdaemon.android.encdroid;
 
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.util.Log;
@@ -92,7 +94,7 @@ public class DropboxAccount extends Account {
 	public String getName() {
 		return "Dropbox";
 	}
-	
+
 	@Override
 	public int getIconResId() {
 		return R.drawable.ic_dropbox;
@@ -241,5 +243,12 @@ public class DropboxAccount extends Account {
 	@Override
 	public EncFSFileProvider getFileProvider(String path) {
 		return new DropboxFileProvider(mApi, path);
+	}
+
+	@Override
+	public boolean forwardActivityResult(Activity origin, int requestCode,
+			int resultCode, Intent data) {
+		// Not needed
+		return false;
 	}
 }

@@ -20,14 +20,16 @@ package org.mrpdaemon.android.encdroid;
 
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 
 // Base class for all account types
 public abstract class Account {
 
 	// Return account name
 	public abstract String getName();
-	
+
 	// Return icon resource id for this account
 	public abstract int getIconResId();
 
@@ -45,6 +47,10 @@ public abstract class Account {
 
 	// Resume linking or authentication on return from another Activity
 	public abstract boolean resumeLinkOrAuth();
+
+	// Forwarded activity result on return from another Activity
+	public abstract boolean forwardActivityResult(Activity origin,
+			int requestCode, int resultCode, final Intent data);
 
 	// Unlink account from user and destroy all tokens
 	public abstract void unLink();

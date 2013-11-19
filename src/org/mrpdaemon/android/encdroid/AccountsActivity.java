@@ -159,6 +159,31 @@ public class AccountsActivity extends ListActivity {
 	/*
 	 * (non-Javadoc)
 	 * 
+	 * @see android.app.Activity#onActivityResult(int, int,
+	 * android.content.Intent)
+	 */
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+
+		for (Account account : mApp.getAccountList()) {
+			if (account.isLinkOrAuthInProgress()) {
+				if (account.forwardActivityResult(AccountsActivity.this,
+						requestCode, resultCode, data) == true) {
+					refreshList();
+				} else {
+					mErrDialogText = String.format(
+							getString(R.string.account_login_error),
+							account.getName());
+					showDialog(DIALOG_ERROR);
+				}
+			}
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see android.app.Activity#onResume()
 	 */
 	@Override
