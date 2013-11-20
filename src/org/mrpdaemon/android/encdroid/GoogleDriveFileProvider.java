@@ -54,7 +54,7 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 	private Drive driveService;
 
 	// Standard search filter
-	private static String searchFilter = " and trashed=false and hidden=false";
+	private static String searchFilter = " and trashed=false";
 
 	// File ID caching (absPath -> fileId)
 	private HashMap<String, String> fileIdCache;
