@@ -620,17 +620,6 @@ public class VolumeListActivity extends ListActivity {
 								createProgressBarForTask(ASYNC_TASK_DELETE,
 										mSelectedVolume.getName());
 
-								// auth if needed
-								Account account = mSelectedVolume
-										.getFileSystem().getAccount();
-
-								if (account != null) {
-									if (Account.authIfNeeded(account,
-											VolumeListActivity.this, TAG) == false) {
-										return;
-									}
-								}
-
 								// Launch async task to delete volume
 								mAsyncTask = new DeleteVolumeTask(mProgDialog,
 										mSelectedVolume);
@@ -811,12 +800,6 @@ public class VolumeListActivity extends ListActivity {
 	private void unlockSelectedVolume() {
 		mVolumeFileSystem = mSelectedVolume.getFileSystem();
 
-		Account account = mVolumeFileSystem.getAccount();
-
-		if (account != null) {
-			Account.authIfNeeded(account, VolumeListActivity.this, TAG);
-		}
-
 		// If key caching is enabled, see if a key is cached
 		byte[] cachedKey = null;
 		if (mPrefs.getBoolean("cache_key", false)) {
@@ -898,6 +881,12 @@ public class VolumeListActivity extends ListActivity {
 
 				// Acquire wake lock to prevent screen from dimming/timing out
 				wl.acquire();
+			}
+
+			Account account = mVolumeFileSystem.getAccount();
+
+			if (account != null) {
+				Account.authIfNeeded(account, VolumeListActivity.this, TAG);
 			}
 
 			// Get file provider for this file system
@@ -1098,6 +1087,15 @@ public class VolumeListActivity extends ListActivity {
 
 		@Override
 		protected Boolean doInBackground(String... args) {
+
+			// authenticate if needed
+			Account account = volume.getFileSystem().getAccount();
+
+			if (account != null) {
+				if (Account.authIfNeeded(account, VolumeListActivity.this, TAG) == false) {
+					return false;
+				}
+			}
 
 			EncFSFileProvider rootProvider = volume.getFileSystem()
 					.getFileProvider("/");
