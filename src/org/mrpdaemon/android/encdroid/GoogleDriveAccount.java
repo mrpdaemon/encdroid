@@ -66,6 +66,9 @@ public class GoogleDriveAccount extends Account {
 	// Whether link is in progress
 	private boolean linkInProgress;
 
+	// Whether authentication is in progress
+	private boolean authInProgress;
+
 	// Whether we're authenticated
 	private boolean authenticated;
 
@@ -122,6 +125,9 @@ public class GoogleDriveAccount extends Account {
 
 	// Kick off authentication thread
 	private void startAuthThread(final Activity activity) {
+
+		authInProgress = true;
+
 		Thread thread = new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -150,6 +156,8 @@ public class GoogleDriveAccount extends Account {
 						showLoginToast(activity, LoginResult.FAILED);
 					}
 					Logger.logException(TAG, e);
+				} finally {
+					authInProgress = false;
 				}
 			}
 		});
@@ -161,6 +169,7 @@ public class GoogleDriveAccount extends Account {
 		mPrefs = app.getSharedPreferences(PREFS_KEY, 0);
 
 		linkInProgress = false;
+		authInProgress = false;
 		authenticated = false;
 
 		credential = GoogleAccountCredential.usingOAuth2(
@@ -221,7 +230,7 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public boolean isLinkOrAuthInProgress() {
-		return linkInProgress;
+		return linkInProgress || authInProgress;
 	}
 
 	@Override
