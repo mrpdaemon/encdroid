@@ -29,6 +29,7 @@ import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Stack;
 
 import org.mrpdaemon.sec.encfs.EncFSFile;
@@ -1601,7 +1602,7 @@ public class VolumeBrowserActivity extends ListActivity {
 					mOrigModifiedDate = new Date(dstFile.lastModified());
 
 					String mimeType = FileUtils.getMimeTypeFromFileName(dstFile
-							.getName());
+							.getName().toLowerCase(Locale.getDefault()));
 
 					// Launch viewer app
 					Intent openIntent = new Intent(Intent.ACTION_VIEW);
