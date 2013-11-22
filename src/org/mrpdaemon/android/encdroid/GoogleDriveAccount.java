@@ -51,6 +51,11 @@ public class GoogleDriveAccount extends Account {
 	private final static String PREF_LINKED = "is_linked";
 	private final static String PREF_ACCOUNT_NAME = "user_name";
 
+	// Login toast type
+	private static enum LoginResult {
+		OK, FAILED
+	};
+
 	// Logger tag
 	private final static String TAG = "GoogleDriveAccount";
 
@@ -86,13 +91,22 @@ public class GoogleDriveAccount extends Account {
 	}
 
 	// Show toast when logged in
-	private void showLoginToast(final Activity activity) {
+	private void showLoginToast(final Activity activity,
+			final LoginResult result) {
 		if (activity != null) {
 			activity.runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					Toast.makeText(activity,
-							activity.getString(R.string.google_drive_login),
+					int stringId = 0;
+					switch (result) {
+					case OK:
+						stringId = R.string.google_drive_login;
+					case FAILED:
+						stringId = R.string.google_drive_login_failed;
+					default:
+						stringId = 0;
+					}
+					Toast.makeText(activity, activity.getString(stringId),
 							Toast.LENGTH_SHORT).show();
 				}
 			});
@@ -107,19 +121,24 @@ public class GoogleDriveAccount extends Account {
 				try {
 					credential.getToken();
 					Log.v(TAG, "Already authenticated to Google API");
-					showLoginToast(activity);
+					showLoginToast(activity, LoginResult.OK);
 					authenticated = true;
 				} catch (UserRecoverableAuthException e) {
+					Logger.logException(TAG, e);
 					if (activity != null) {
 						activity.startActivityForResult(e.getIntent(),
 								REQUEST_AUTH_TOKEN);
 					}
 				} catch (IOException e) {
-					// XXX: show error
-					e.printStackTrace();
+					if (activity != null) {
+						showLoginToast(activity, LoginResult.FAILED);
+					}
+					Logger.logException(TAG, e);
 				} catch (GoogleAuthException e) {
-					// XXX: show error
-					e.printStackTrace();
+					if (activity != null) {
+						showLoginToast(activity, LoginResult.FAILED);
+					}
+					Logger.logException(TAG, e);
 				}
 			}
 		});
@@ -154,7 +173,6 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public int getIconResId() {
-		// XXX: fix icon to be shorter height wise
 		return R.drawable.ic_google_drive;
 	}
 
@@ -249,7 +267,7 @@ public class GoogleDriveAccount extends Account {
 		case REQUEST_AUTH_TOKEN:
 			if (resultCode == Activity.RESULT_OK) {
 				Log.v(TAG, "Successfully authenticated to Google API");
-				showLoginToast(origin);
+				showLoginToast(origin, LoginResult.OK);
 				authenticated = true;
 				return true;
 			}
