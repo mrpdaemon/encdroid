@@ -497,24 +497,31 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 		Log.v(TAG, "File ID for '" + parentPath(absPath(dstPath)) + "' is '"
 				+ dstParentFileId + "'");
 
-		// API request to add dstParentFileId to parents
-		ParentReference newParent = new ParentReference();
-		newParent.setId(dstParentFileId);
-		try {
-			ParentReference result = driveService.parents()
-					.insert(fileId, newParent).execute();
-			Log.v(TAG, "Insert returned " + result.toPrettyString());
-		} catch (IOException e) {
-			Log.e(TAG, "An error occurred: " + e.getMessage());
-			return false;
-		}
+		/*
+		 * If we're doing a simple rename then the src/dst parents are the same
+		 * so we don't need to do any metadata operations.
+		 */
+		if (!dstParentFileId.equals(srcParentFileId)) {
+			// API request to add dstParentFileId to parents
+			ParentReference newParent = new ParentReference();
+			newParent.setId(dstParentFileId);
+			try {
+				ParentReference result = driveService.parents()
+						.insert(fileId, newParent).execute();
+				Log.v(TAG, "Insert returned " + result.toPrettyString());
+			} catch (IOException e) {
+				Log.e(TAG, "An error occurred: " + e.getMessage());
+				return false;
+			}
 
-		// API request to remove srcParentFileId from parents
-		try {
-			driveService.parents().delete(fileId, srcParentFileId).execute();
-		} catch (IOException e) {
-			Log.e(TAG, "An error occurred: " + e.getMessage());
-			return false;
+			// API request to remove srcParentFileId from parents
+			try {
+				driveService.parents().delete(fileId, srcParentFileId)
+						.execute();
+			} catch (IOException e) {
+				Log.e(TAG, "An error occurred: " + e.getMessage());
+				return false;
+			}
 		}
 
 		// Rename file if needed
@@ -522,11 +529,14 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 		if (!lastPathElement(srcPath).equals(newName)) {
 			Log.v(TAG, "Renaming '" + lastPathElement(srcPath) + "' to '"
 					+ newName + "'");
-			File file = driveService.files().get(fileId).execute();
-			file.setTitle(newName);
-
 			try {
-				driveService.files().update(fileId, file).execute();
+				File file = new File();
+				file.setTitle(newName);
+
+				Files.Patch patchRequest = driveService.files().patch(fileId,
+						file);
+				patchRequest.setFields("title");
+				patchRequest.execute();
 			} catch (IOException e) {
 				Log.e(TAG, "An error occurred: " + e.getMessage());
 				return false;
