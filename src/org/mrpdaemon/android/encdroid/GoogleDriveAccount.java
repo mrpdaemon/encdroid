@@ -33,6 +33,7 @@ import com.google.api.services.drive.DriveScopes;
 
 import android.accounts.AccountManager;
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -53,7 +54,7 @@ public class GoogleDriveAccount extends Account {
 
 	// Login toast type
 	private static enum LoginResult {
-		OK, FAILED
+		OK, FAILED, NO_PLAY_SERVICES
 	};
 
 	// Logger tag
@@ -104,6 +105,9 @@ public class GoogleDriveAccount extends Account {
 						break;
 					case FAILED:
 						stringId = R.string.google_drive_login_failed;
+						break;
+					case NO_PLAY_SERVICES:
+						stringId = R.string.google_drive_no_play_services;
 						break;
 					default:
 						stringId = 0;
@@ -200,8 +204,15 @@ public class GoogleDriveAccount extends Account {
 		// Select account to link
 		if (linked == false) {
 			linkInProgress = true;
-			activity.startActivityForResult(
-					credential.newChooseAccountIntent(), REQUEST_ACCOUNT_PICKER);
+			try {
+				activity.startActivityForResult(
+						credential.newChooseAccountIntent(),
+						REQUEST_ACCOUNT_PICKER);
+			} catch (ActivityNotFoundException e) {
+				// User doesn't have Google Play Services Framework installed
+				showLoginToast(activity, LoginResult.NO_PLAY_SERVICES);
+				Logger.logException(TAG, e);
+			}
 		} else {
 			createDriveService(accountName);
 			startAuthThread(activity);
