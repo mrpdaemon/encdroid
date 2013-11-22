@@ -572,11 +572,9 @@ public class VolumeListActivity extends ListActivity {
 							Account account = fs.getAccount();
 
 							if (account != null) {
-								if (!account.isAuthenticated()) {
-									account.startLinkOrAuth(VolumeListActivity.this);
-									if (!account.isAuthenticated()) {
-										return;
-									}
+								if (Account.authIfNeeded(account,
+										VolumeListActivity.this, TAG) == false) {
+									return;
 								}
 							}
 
@@ -627,12 +625,9 @@ public class VolumeListActivity extends ListActivity {
 										.getFileSystem().getAccount();
 
 								if (account != null) {
-
-									if (!account.isAuthenticated()) {
-										account.startLinkOrAuth(VolumeListActivity.this);
-										if (!account.isAuthenticated()) {
-											return;
-										}
+									if (Account.authIfNeeded(account,
+											VolumeListActivity.this, TAG) == false) {
+										return;
 									}
 								}
 
@@ -819,12 +814,7 @@ public class VolumeListActivity extends ListActivity {
 		Account account = mVolumeFileSystem.getAccount();
 
 		if (account != null) {
-			if (!account.isAuthenticated()) {
-				account.startLinkOrAuth(VolumeListActivity.this);
-				if (!account.isAuthenticated()) {
-					return;
-				}
-			}
+			Account.authIfNeeded(account, VolumeListActivity.this, TAG);
 		}
 
 		// If key caching is enabled, see if a key is cached

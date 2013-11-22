@@ -60,4 +60,26 @@ public abstract class Account {
 
 	// Return an EncFSFileProvider for this account at the given path
 	public abstract EncFSFileProvider getFileProvider(String path);
+
+	// Common code to authenticate the account if needed
+	public static boolean authIfNeeded(Account account, Context context,
+			String logTag) {
+		if (!account.isAuthenticated()) {
+			account.startLinkOrAuth(context);
+			/*
+			 * If the account isn't yet authenticated and there's authentication
+			 * in progress we loop around until the thread is done.
+			 */
+			while (!account.isAuthenticated()
+					&& account.isLinkOrAuthInProgress()) {
+				try {
+					Thread.sleep(10);
+				} catch (InterruptedException e) {
+					Logger.logException(logTag, e);
+				}
+			}
+		}
+
+		return account.isAuthenticated();
+	}
 }
