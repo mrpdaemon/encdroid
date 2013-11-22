@@ -72,6 +72,7 @@ public abstract class Account {
 			 */
 			while (!account.isAuthenticated()
 					&& account.isLinkOrAuthInProgress()) {
+				//XXX: Use a timeout to break infinite loop
 				try {
 					Thread.sleep(10);
 				} catch (InterruptedException e) {
