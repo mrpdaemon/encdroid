@@ -86,7 +86,7 @@
     <string name="launching_chooser">Launching file chooser</string>
     <string name="paste_fail">Failed to paste file(s)</string>
     <string name="delete_vol_dialog_confirm_str">Are you sure you want to delete volume \'%s\' ?</string>
-    <string name="delete_vol_dialog_disk_str">Delete from disk</string>
+    <string name="delete_vol_dialog_disk_str">Delete from %s storage</string>
     <string name="auto_import_vol_dialog_str">Import volume at \'%s\' ?</string>
     <string name="choose_config_dialog_str">Choose a config file:</string>
     <string name="browse_config_dialog_str">No encfs config found at \'%s\' \nBrowse for a local config file now?</string>

@@ -618,7 +618,9 @@ public class VolumeListActivity extends ListActivity {
 				return null;
 			}
 
-			final CharSequence[] items = { getString(R.string.delete_vol_dialog_disk_str) };
+			final CharSequence[] items = { String.format(
+					getString(R.string.delete_vol_dialog_disk_str),
+					mSelectedVolume.getFileSystem().getName()) };
 			final boolean[] states = { true };
 
 			alertBuilder.setTitle(String.format(
