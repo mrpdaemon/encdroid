@@ -101,10 +101,13 @@ public class GoogleDriveAccount extends Account {
 					switch (result) {
 					case OK:
 						stringId = R.string.google_drive_login;
+						break;
 					case FAILED:
 						stringId = R.string.google_drive_login_failed;
+						break;
 					default:
 						stringId = 0;
+						break;
 					}
 					Toast.makeText(activity, activity.getString(stringId),
 							Toast.LENGTH_SHORT).show();
@@ -120,6 +123,10 @@ public class GoogleDriveAccount extends Account {
 			public void run() {
 				try {
 					credential.getToken();
+
+					// Do an about request to test if the API works
+					driveService.about().get().execute();
+
 					Log.v(TAG, "Already authenticated to Google API");
 					showLoginToast(activity, LoginResult.OK);
 					authenticated = true;
