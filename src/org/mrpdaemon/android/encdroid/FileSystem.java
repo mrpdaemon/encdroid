@@ -65,7 +65,7 @@ public abstract class FileSystem {
 			if (mAccount.isLinked() && mAccount.isAuthenticated()) {
 				return mAccount.getFileProvider(path);
 			} else {
-				if (Account.linkOrAuthIfNeeded(mAccount, mContext, TAG)) {
+				if (mAccount.linkOrAuthIfNeeded(mContext, TAG)) {
 					return mAccount.getFileProvider(path);
 				}
 			}
