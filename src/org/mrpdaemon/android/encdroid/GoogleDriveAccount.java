@@ -208,7 +208,12 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public void startLinkOrAuth(Context context) {
-		Activity activity = (Activity) context;
+		Activity activity = null;
+
+		// We might be called from a non-Activity context, so safely dereference
+		if (context instanceof Activity) {
+			activity = (Activity) context;
+		}
 
 		// Select account to link
 		if (linked == false) {
