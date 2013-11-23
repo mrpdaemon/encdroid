@@ -23,9 +23,16 @@ import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 
 // Base class for all account types
 public abstract class Account {
+
+	// Timeout (in ms) for auth thread wait
+	private static final int AUTH_THREAD_TIMEOUT = 5000;
+
+	// Sleep interval (in ms) between checking authentication thread progress
+	private static final int AUTH_THREAD_CHECK_INTERVAL = 10;
 
 	// Return account name
 	public abstract String getName();
@@ -70,13 +77,21 @@ public abstract class Account {
 			 * If the account isn't yet authenticated and there's authentication
 			 * in progress we loop around until the thread is done.
 			 */
+			int authTimeout = 0;
 			while (!account.isAuthenticated()
 					&& account.isLinkOrAuthInProgress()) {
-				//XXX: Use a timeout to break infinite loop
 				try {
-					Thread.sleep(10);
+					Thread.sleep(AUTH_THREAD_CHECK_INTERVAL);
 				} catch (InterruptedException e) {
 					Logger.logException(logTag, e);
+				}
+
+				// Check for timeout to break loop
+				authTimeout += AUTH_THREAD_CHECK_INTERVAL;
+				if (authTimeout >= AUTH_THREAD_TIMEOUT) {
+					Log.e(logTag,
+							"Timeout while waiting for authentication thread");
+					return false;
 				}
 			}
 		}
