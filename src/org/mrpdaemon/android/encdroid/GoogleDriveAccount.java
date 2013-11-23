@@ -291,6 +291,9 @@ public class GoogleDriveAccount extends Account {
 					createDriveService(accountName);
 
 					startAuthThread(origin);
+					
+					// Clear linkInProgress AFTER startAuthThread() sets authInProgress
+					linkInProgress = false;
 
 					return true;
 				}
