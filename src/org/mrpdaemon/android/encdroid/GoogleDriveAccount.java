@@ -252,6 +252,7 @@ public class GoogleDriveAccount extends Account {
 
 		// Clear data
 		linkInProgress = false;
+		authInProgress = false;
 		authenticated = false;
 		linked = false;
 		accountName = null;
