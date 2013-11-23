@@ -880,7 +880,8 @@ public class VolumeListActivity extends ListActivity {
 			// Authenticate if needed
 			Account account = mVolumeFileSystem.getAccount();
 			if (account != null) {
-				if (Account.authIfNeeded(account, VolumeListActivity.this, TAG) == false) {
+				if (Account.linkOrAuthIfNeeded(account,
+						VolumeListActivity.this, TAG) == false) {
 					mErrDialogText = String.format(
 							getString(R.string.account_login_error),
 							mVolumeFileSystem.getName());
@@ -1011,7 +1012,8 @@ public class VolumeListActivity extends ListActivity {
 			Account account = volumeFs.getAccount();
 
 			if (account != null) {
-				if (Account.authIfNeeded(account, VolumeListActivity.this, TAG) == false) {
+				if (Account.linkOrAuthIfNeeded(account,
+						VolumeListActivity.this, TAG) == false) {
 					mErrDialogText = String.format(
 							getString(R.string.account_login_error),
 							volumeFs.getName());
@@ -1103,7 +1105,8 @@ public class VolumeListActivity extends ListActivity {
 			Account account = volume.getFileSystem().getAccount();
 
 			if (account != null) {
-				if (Account.authIfNeeded(account, VolumeListActivity.this, TAG) == false) {
+				if (Account.linkOrAuthIfNeeded(account,
+						VolumeListActivity.this, TAG) == false) {
 					mErrDialogText = String.format(
 							getString(R.string.account_login_error), volume
 									.getFileSystem().getName());
@@ -1176,7 +1179,8 @@ public class VolumeListActivity extends ListActivity {
 			Account account = fs.getAccount();
 
 			if (account != null) {
-				if (Account.authIfNeeded(account, VolumeListActivity.this, TAG) == false) {
+				if (Account.linkOrAuthIfNeeded(account,
+						VolumeListActivity.this, TAG) == false) {
 					mErrDialogText = String.format(
 							getString(R.string.account_login_error),
 							fs.getName());

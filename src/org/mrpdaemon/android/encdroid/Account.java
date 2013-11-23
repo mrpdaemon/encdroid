@@ -31,6 +31,9 @@ public abstract class Account {
 	// Timeout (in ms) for auth thread wait
 	private static final int AUTH_THREAD_TIMEOUT = 5000;
 
+	// Timeout (in ms) for link wait
+	private static final int LINK_TIMEOUT = 120000;
+
 	// Sleep interval (in ms) between checking authentication thread progress
 	private static final int AUTH_THREAD_CHECK_INTERVAL = 10;
 
@@ -68,16 +71,24 @@ public abstract class Account {
 	// Return an EncFSFileProvider for this account at the given path
 	public abstract EncFSFileProvider getFileProvider(String path);
 
-	// Common code to authenticate the account if needed
-	public static boolean authIfNeeded(Account account, Context context,
+	/*
+	 * Common code to link or authenticate the account if needed.
+	 * 
+	 * Must be called from a non-Activity thread, otherwise will deadlock.
+	 */
+	public static boolean linkOrAuthIfNeeded(Account account, Context context,
 			String logTag) {
-		if (!account.isAuthenticated()) {
+		if (!account.isLinked() || !account.isAuthenticated()) {
+			// Wait for link is longer than waiting for authentication
+			int waitTimeout = !account.isLinked() ? LINK_TIMEOUT
+					: AUTH_THREAD_TIMEOUT;
+
 			account.startLinkOrAuth(context);
 			/*
 			 * If the account isn't yet authenticated and there's authentication
 			 * in progress we loop around until the thread is done.
 			 */
-			int authTimeout = 0;
+			int timer = 0;
 			while (!account.isAuthenticated()
 					&& account.isLinkOrAuthInProgress()) {
 				try {
@@ -87,8 +98,8 @@ public abstract class Account {
 				}
 
 				// Check for timeout to break loop
-				authTimeout += AUTH_THREAD_CHECK_INTERVAL;
-				if (authTimeout >= AUTH_THREAD_TIMEOUT) {
+				timer += AUTH_THREAD_CHECK_INTERVAL;
+				if (timer >= waitTimeout) {
 					Log.e(logTag,
 							"Timeout while waiting for authentication thread");
 					return false;
