@@ -90,6 +90,7 @@ public class VolumeListActivity extends ListActivity {
 	private final static int ASYNC_TASK_UNLOCK_PBKDF2 = 1;
 	private final static int ASYNC_TASK_CREATE = 2;
 	private final static int ASYNC_TASK_DELETE = 3;
+	private final static int ASYNC_TASK_LAUNCH_CHOOSER = 4;
 
 	// Saved instance state keys
 	private final static String SAVED_VOL_IDX_KEY = "vol_idx";
@@ -567,26 +568,16 @@ public class VolumeListActivity extends ListActivity {
 					R.layout.fs_list_item, mApp.getFileSystemList()),
 					new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int item) {
-							FileSystem fs = mApp.getFileSystemList().get(item);
+							createProgressBarForTask(ASYNC_TASK_LAUNCH_CHOOSER,
+									null);
 
-							Account account = fs.getAccount();
-
-							if (account != null) {
-								if (Account.authIfNeeded(account,
-										VolumeListActivity.this, TAG) == false) {
-									return;
-								}
-							}
-
-							if (mVolumeOp == VOLUME_OP_IMPORT) {
-								launchFileChooser(
-										FileChooserActivity.VOLUME_PICKER_MODE,
-										item);
-							} else {
-								launchFileChooser(
-										FileChooserActivity.CREATE_VOLUME_MODE,
-										item);
-							}
+							// Launch async task for launching file chooser -
+							// needed for network auth
+							mAsyncTask = new LaunchChooserTask(mProgDialog,
+									item);
+							mAsyncTaskId = ASYNC_TASK_LAUNCH_CHOOSER;
+							mAsyncTask.setActivity(VolumeListActivity.this);
+							mAsyncTask.execute();
 						}
 					});
 			alertDialog = alertBuilder.create();
@@ -836,6 +827,9 @@ public class VolumeListActivity extends ListActivity {
 		case ASYNC_TASK_UNLOCK_PBKDF2:
 			mProgDialog.setTitle(getString(R.string.pbkdf_dialog_title_str));
 			mProgDialog.setMessage(getString(R.string.pbkdf_dialog_msg_str));
+			break;
+		case ASYNC_TASK_LAUNCH_CHOOSER:
+			mProgDialog.setTitle(getString(R.string.launching_chooser));
 			break;
 		default:
 			Log.e(TAG, "Unknown task ID: " + taskId);
@@ -1136,6 +1130,60 @@ public class VolumeListActivity extends ListActivity {
 				if (result) {
 					((VolumeListActivity) getActivity()).deleteVolume(volume);
 				} else {
+					((VolumeListActivity) getActivity())
+							.showDialog(DIALOG_ERROR);
+				}
+			}
+		}
+	}
+
+	private class LaunchChooserTask extends EDAsyncTask<String, Void, Boolean> {
+
+		// Selected volume index
+		private int item;
+
+		public LaunchChooserTask(ProgressDialog dialog, int item) {
+			super();
+			setProgressDialog(dialog);
+			this.item = item;
+		}
+
+		@Override
+		protected Boolean doInBackground(String... args) {
+
+			FileSystem fs = mApp.getFileSystemList().get(item);
+
+			Account account = fs.getAccount();
+
+			if (account != null) {
+				if (Account.authIfNeeded(account, VolumeListActivity.this, TAG) == false) {
+					mErrDialogText = String.format(
+							getString(R.string.account_login_error),
+							fs.getName());
+					return false;
+				}
+			}
+
+			if (mVolumeOp == VOLUME_OP_IMPORT) {
+				launchFileChooser(FileChooserActivity.VOLUME_PICKER_MODE, item);
+			} else {
+				launchFileChooser(FileChooserActivity.CREATE_VOLUME_MODE, item);
+			}
+
+			return true;
+		}
+
+		// Run after the task is complete
+		@Override
+		protected void onPostExecute(Boolean result) {
+			super.onPostExecute(result);
+
+			if (myDialog.isShowing()) {
+				myDialog.dismiss();
+			}
+
+			if (!isCancelled()) {
+				if (!result) {
 					((VolumeListActivity) getActivity())
 							.showDialog(DIALOG_ERROR);
 				}
