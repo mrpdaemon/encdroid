@@ -76,21 +76,18 @@ public abstract class Account {
 	 * 
 	 * Must be called from a non-Activity thread, otherwise will deadlock.
 	 */
-	public static boolean linkOrAuthIfNeeded(Account account, Context context,
-			String logTag) {
-		if (!account.isLinked() || !account.isAuthenticated()) {
+	public boolean linkOrAuthIfNeeded(Context context, String logTag) {
+		if (!isLinked() || !isAuthenticated()) {
 			// Wait for link is longer than waiting for authentication
-			int waitTimeout = !account.isLinked() ? LINK_TIMEOUT
-					: AUTH_THREAD_TIMEOUT;
+			int waitTimeout = !isLinked() ? LINK_TIMEOUT : AUTH_THREAD_TIMEOUT;
 
-			account.startLinkOrAuth(context);
+			startLinkOrAuth(context);
 			/*
 			 * If the account isn't yet authenticated and there's authentication
 			 * in progress we loop around until the thread is done.
 			 */
 			int timer = 0;
-			while (!account.isAuthenticated()
-					&& account.isLinkOrAuthInProgress()) {
+			while (!isAuthenticated() && isLinkOrAuthInProgress()) {
 				try {
 					Thread.sleep(AUTH_THREAD_CHECK_INTERVAL);
 				} catch (InterruptedException e) {
@@ -107,6 +104,6 @@ public abstract class Account {
 			}
 		}
 
-		return account.isAuthenticated();
+		return isAuthenticated();
 	}
 }

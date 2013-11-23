@@ -876,11 +876,10 @@ public class VolumeListActivity extends ListActivity {
 				wl.acquire();
 			}
 
-			// Authenticate if needed
+			// link or authenticate account if needed
 			Account account = mVolumeFileSystem.getAccount();
 			if (account != null) {
-				if (Account.linkOrAuthIfNeeded(account,
-						VolumeListActivity.this, TAG) == false) {
+				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
 					mErrDialogText = String.format(
 							getString(R.string.account_login_error),
 							mVolumeFileSystem.getName());
@@ -1007,12 +1006,10 @@ public class VolumeListActivity extends ListActivity {
 			volumeName = args[1];
 			password = args[2];
 
-			// authenticate if needed
+			// link or authenticate account if needed
 			Account account = volumeFs.getAccount();
-
 			if (account != null) {
-				if (Account.linkOrAuthIfNeeded(account,
-						VolumeListActivity.this, TAG) == false) {
+				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
 					mErrDialogText = String.format(
 							getString(R.string.account_login_error),
 							volumeFs.getName());
@@ -1100,12 +1097,10 @@ public class VolumeListActivity extends ListActivity {
 		@Override
 		protected Boolean doInBackground(String... args) {
 
-			// authenticate if needed
+			// link or authenticate account if needed
 			Account account = volume.getFileSystem().getAccount();
-
 			if (account != null) {
-				if (Account.linkOrAuthIfNeeded(account,
-						VolumeListActivity.this, TAG) == false) {
+				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
 					mErrDialogText = String.format(
 							getString(R.string.account_login_error), volume
 									.getFileSystem().getName());
@@ -1175,11 +1170,10 @@ public class VolumeListActivity extends ListActivity {
 
 			FileSystem fs = mApp.getFileSystemList().get(item);
 
+			// link or authenticate account if needed
 			Account account = fs.getAccount();
-
 			if (account != null) {
-				if (Account.linkOrAuthIfNeeded(account,
-						VolumeListActivity.this, TAG) == false) {
+				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
 					mErrDialogText = String.format(
 							getString(R.string.account_login_error),
 							fs.getName());
