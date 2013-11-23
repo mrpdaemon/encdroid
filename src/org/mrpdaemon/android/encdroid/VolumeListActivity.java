@@ -411,6 +411,10 @@ public class VolumeListActivity extends ListActivity {
 			});
 
 			break;
+		case DIALOG_ERROR:
+			// Refresh error text
+			((AlertDialog) dialog).setMessage(mErrDialogText);
+			break;
 		default:
 			break;
 		}
