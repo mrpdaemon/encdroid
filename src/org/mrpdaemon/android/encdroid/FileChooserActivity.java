@@ -155,7 +155,12 @@ public class FileChooserActivity extends ListActivity {
 
 		mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-		// Instantiate the proper file provider
+		/*
+		 * Instantiate the proper file provider
+		 * 
+		 * It's OK to do this from the Activity context since the caller
+		 * guarantees that the account is already linked/authenticated.
+		 */
 		mFileProvider = mFileSystem.getFileProvider("/");
 
 		launchFillTask();
