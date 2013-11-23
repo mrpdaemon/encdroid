@@ -41,8 +41,7 @@ public abstract class FileSystem {
 	}
 
 	// Whether this file system is enabled
-	public boolean isEnabled()
-	{
+	public boolean isEnabled() {
 		return true;
 	}
 
@@ -65,12 +64,10 @@ public abstract class FileSystem {
 		if (mAccount != null) {
 			if (mAccount.isLinked() && mAccount.isAuthenticated()) {
 				return mAccount.getFileProvider(path);
-			} else if (mAccount.isLinked() && !mAccount.isAuthenticated()) {
-				if (Account.authIfNeeded(mAccount, mContext, TAG)) {
+			} else {
+				if (Account.linkOrAuthIfNeeded(mAccount, mContext, TAG)) {
 					return mAccount.getFileProvider(path);
 				}
-			} else {
-				mAccount.startLinkOrAuth(mContext);
 			}
 		}
 
