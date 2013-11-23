@@ -877,10 +877,15 @@ public class VolumeListActivity extends ListActivity {
 				wl.acquire();
 			}
 
+			// Authenticate if needed
 			Account account = mVolumeFileSystem.getAccount();
-
 			if (account != null) {
-				Account.authIfNeeded(account, VolumeListActivity.this, TAG);
+				if (Account.authIfNeeded(account, VolumeListActivity.this, TAG) == false) {
+					mErrDialogText = String.format(
+							getString(R.string.account_login_error),
+							mVolumeFileSystem.getName());
+					return null;
+				}
 			}
 
 			// Get file provider for this file system
@@ -1002,6 +1007,18 @@ public class VolumeListActivity extends ListActivity {
 			volumeName = args[1];
 			password = args[2];
 
+			// authenticate if needed
+			Account account = volumeFs.getAccount();
+
+			if (account != null) {
+				if (Account.authIfNeeded(account, VolumeListActivity.this, TAG) == false) {
+					mErrDialogText = String.format(
+							getString(R.string.account_login_error),
+							volumeFs.getName());
+					return false;
+				}
+			}
+
 			EncFSFileProvider rootProvider = volumeFs.getFileProvider("/");
 
 			try {
@@ -1087,6 +1104,9 @@ public class VolumeListActivity extends ListActivity {
 
 			if (account != null) {
 				if (Account.authIfNeeded(account, VolumeListActivity.this, TAG) == false) {
+					mErrDialogText = String.format(
+							getString(R.string.account_login_error), volume
+									.getFileSystem().getName());
 					return false;
 				}
 			}
