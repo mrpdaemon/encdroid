@@ -215,7 +215,15 @@ public class DropboxFileProvider implements EncFSFileProvider {
 
 			// Add entries to list
 			for (Entry childEnt : dirEnt.contents) {
-				list.add(entryToFileInfo(childEnt));
+				try {
+					list.add(entryToFileInfo(childEnt));
+				} catch (IllegalArgumentException iae) {
+					/*
+					 * Can happen if the file name is illegal, for example
+					 * starting with '/'. In this case just skip adding the file
+					 * to the list.
+					 */
+				}
 			}
 
 			return list;
