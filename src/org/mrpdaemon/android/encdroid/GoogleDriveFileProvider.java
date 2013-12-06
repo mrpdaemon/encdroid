@@ -412,7 +412,15 @@ public class GoogleDriveFileProvider implements EncFSFileProvider {
 				String mimeType = file.getMimeType();
 				if (fileIsDirectory(file)
 						|| !mimeType.startsWith("application/vnd.google-apps")) {
-					result.add(fileToEncFSFileInfo(relPath, file));
+					try {
+						result.add(fileToEncFSFileInfo(relPath, file));
+					} catch (IllegalArgumentException iae) {
+						/*
+						 * Can happen if the file name is illegal, for example
+						 * starting with '/'. In this case just skip adding the
+						 * file to the list.
+						 */
+					}
 				}
 			}
 		}
