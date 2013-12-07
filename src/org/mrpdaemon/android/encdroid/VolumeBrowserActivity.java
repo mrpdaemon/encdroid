@@ -29,6 +29,7 @@ import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Stack;
 
 import org.mrpdaemon.sec.encfs.EncFSFile;
@@ -68,9 +69,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
-import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -266,20 +265,6 @@ public class VolumeBrowserActivity extends ListActivity {
 		mListHeader.setTypeface(null, Typeface.BOLD);
 		mListHeader.setTextSize(16);
 		this.getListView().addHeaderView(mListHeader);
-
-		// Don't show the context menu for the list header
-		this.getListView().setOnItemLongClickListener(
-				new OnItemLongClickListener() {
-					@Override
-					public boolean onItemLongClick(AdapterView<?> adapterView,
-							View v, int position, long id) {
-						if (position != 0) {
-							VolumeBrowserActivity.this.getListView()
-									.showContextMenu();
-						}
-						return true;
-					}
-				});
 
 		if (savedInstanceState == null) {
 			// Activity being created for the first time
@@ -1617,7 +1602,7 @@ public class VolumeBrowserActivity extends ListActivity {
 					mOrigModifiedDate = new Date(dstFile.lastModified());
 
 					String mimeType = FileUtils.getMimeTypeFromFileName(dstFile
-							.getName());
+							.getName().toLowerCase(Locale.getDefault()));
 
 					// Launch viewer app
 					Intent openIntent = new Intent(Intent.ACTION_VIEW);

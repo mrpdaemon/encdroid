@@ -31,6 +31,9 @@ public abstract class FileSystem {
 	// Account associated with this file system
 	private Account mAccount;
 
+	// Logger tag
+	private static final String TAG = "FileSystem";
+
 	// Create a new FileSystem object with an Account
 	public FileSystem(Account account, Context context) {
 		this.mContext = context;
@@ -38,8 +41,7 @@ public abstract class FileSystem {
 	}
 
 	// Whether this file system is enabled
-	public boolean isEnabled()
-	{
+	public boolean isEnabled() {
 		return true;
 	}
 
@@ -63,7 +65,9 @@ public abstract class FileSystem {
 			if (mAccount.isLinked() && mAccount.isAuthenticated()) {
 				return mAccount.getFileProvider(path);
 			} else {
-				mAccount.startLinkOrAuth(mContext);
+				if (mAccount.linkOrAuthIfNeeded(mContext, TAG)) {
+					return mAccount.getFileProvider(path);
+				}
 			}
 		}
 

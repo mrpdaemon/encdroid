@@ -23,9 +23,19 @@ import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 
 // Base class for all account types
 public abstract class Account {
+
+	// Timeout (in ms) for auth thread wait
+	private static final int AUTH_THREAD_TIMEOUT = 5000;
+
+	// Timeout (in ms) for link wait
+	private static final int LINK_TIMEOUT = 120000;
+
+	// Sleep interval (in ms) between checking authentication thread progress
+	private static final int AUTH_THREAD_CHECK_INTERVAL = 10;
 
 	// Return account name
 	public abstract String getName();
@@ -60,4 +70,40 @@ public abstract class Account {
 
 	// Return an EncFSFileProvider for this account at the given path
 	public abstract EncFSFileProvider getFileProvider(String path);
+
+	/*
+	 * Common code to link or authenticate the account if needed.
+	 * 
+	 * Must be called from a non-Activity thread, otherwise will deadlock.
+	 */
+	public boolean linkOrAuthIfNeeded(Context context, String logTag) {
+		if (!isLinked() || !isAuthenticated()) {
+			// Wait for link is longer than waiting for authentication
+			int waitTimeout = !isLinked() ? LINK_TIMEOUT : AUTH_THREAD_TIMEOUT;
+
+			startLinkOrAuth(context);
+			/*
+			 * If the account isn't yet authenticated and there's authentication
+			 * in progress we loop around until the thread is done.
+			 */
+			int timer = 0;
+			while (!isAuthenticated() && isLinkOrAuthInProgress()) {
+				try {
+					Thread.sleep(AUTH_THREAD_CHECK_INTERVAL);
+				} catch (InterruptedException e) {
+					Logger.logException(logTag, e);
+				}
+
+				// Check for timeout to break loop
+				timer += AUTH_THREAD_CHECK_INTERVAL;
+				if (timer >= waitTimeout) {
+					Log.e(logTag,
+							"Timeout while waiting for authentication thread");
+					return false;
+				}
+			}
+		}
+
+		return isAuthenticated();
+	}
 }

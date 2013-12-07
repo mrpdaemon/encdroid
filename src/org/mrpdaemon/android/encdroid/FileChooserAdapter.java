@@ -19,6 +19,7 @@
 package org.mrpdaemon.android.encdroid;
 
 import java.util.List;
+import java.util.Locale;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -93,7 +94,7 @@ public class FileChooserAdapter extends ArrayAdapter<FileChooserItem> {
 					fileIcon.setImageResource(R.drawable.ic_folder);
 				} else {
 					String mimeType = FileUtils.getMimeTypeFromFileName(item
-							.getName());
+							.getName().toLowerCase(Locale.getDefault()));
 					if (mimeType != null) {
 						fileIcon.setImageResource(FileUtils
 								.getIconResourceForMimeType(mimeType));

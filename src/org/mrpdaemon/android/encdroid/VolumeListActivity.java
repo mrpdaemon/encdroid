@@ -90,6 +90,7 @@ public class VolumeListActivity extends ListActivity {
 	private final static int ASYNC_TASK_UNLOCK_PBKDF2 = 1;
 	private final static int ASYNC_TASK_CREATE = 2;
 	private final static int ASYNC_TASK_DELETE = 3;
+	private final static int ASYNC_TASK_LAUNCH_CHOOSER = 4;
 
 	// Saved instance state keys
 	private final static String SAVED_VOL_IDX_KEY = "vol_idx";
@@ -410,6 +411,10 @@ public class VolumeListActivity extends ListActivity {
 			});
 
 			break;
+		case DIALOG_ERROR:
+			// Refresh error text
+			((AlertDialog) dialog).setMessage(mErrDialogText);
+			break;
 		default:
 			break;
 		}
@@ -567,28 +572,16 @@ public class VolumeListActivity extends ListActivity {
 					R.layout.fs_list_item, mApp.getFileSystemList()),
 					new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int item) {
-							FileSystem fs = mApp.getFileSystemList().get(item);
+							createProgressBarForTask(ASYNC_TASK_LAUNCH_CHOOSER,
+									null);
 
-							Account account = fs.getAccount();
-
-							if (account != null) {
-								if (!account.isAuthenticated()) {
-									account.startLinkOrAuth(VolumeListActivity.this);
-									if (!account.isAuthenticated()) {
-										return;
-									}
-								}
-							}
-
-							if (mVolumeOp == VOLUME_OP_IMPORT) {
-								launchFileChooser(
-										FileChooserActivity.VOLUME_PICKER_MODE,
-										item);
-							} else {
-								launchFileChooser(
-										FileChooserActivity.CREATE_VOLUME_MODE,
-										item);
-							}
+							// Launch async task for launching file chooser -
+							// needed for network auth
+							mAsyncTask = new LaunchChooserTask(mProgDialog,
+									item);
+							mAsyncTaskId = ASYNC_TASK_LAUNCH_CHOOSER;
+							mAsyncTask.setActivity(VolumeListActivity.this);
+							mAsyncTask.execute();
 						}
 					});
 			alertDialog = alertBuilder.create();
@@ -621,20 +614,6 @@ public class VolumeListActivity extends ListActivity {
 								// Delete volume from disk
 								createProgressBarForTask(ASYNC_TASK_DELETE,
 										mSelectedVolume.getName());
-
-								// auth if needed
-								Account account = mSelectedVolume
-										.getFileSystem().getAccount();
-
-								if (account != null) {
-
-									if (!account.isAuthenticated()) {
-										account.startLinkOrAuth(VolumeListActivity.this);
-										if (!account.isAuthenticated()) {
-											return;
-										}
-									}
-								}
 
 								// Launch async task to delete volume
 								mAsyncTask = new DeleteVolumeTask(mProgDialog,
@@ -816,17 +795,6 @@ public class VolumeListActivity extends ListActivity {
 	private void unlockSelectedVolume() {
 		mVolumeFileSystem = mSelectedVolume.getFileSystem();
 
-		Account account = mVolumeFileSystem.getAccount();
-
-		if (account != null) {
-			if (!account.isAuthenticated()) {
-				account.startLinkOrAuth(VolumeListActivity.this);
-				if (!account.isAuthenticated()) {
-					return;
-				}
-			}
-		}
-
 		// If key caching is enabled, see if a key is cached
 		byte[] cachedKey = null;
 		if (mPrefs.getBoolean("cache_key", false)) {
@@ -863,6 +831,9 @@ public class VolumeListActivity extends ListActivity {
 		case ASYNC_TASK_UNLOCK_PBKDF2:
 			mProgDialog.setTitle(getString(R.string.pbkdf_dialog_title_str));
 			mProgDialog.setMessage(getString(R.string.pbkdf_dialog_msg_str));
+			break;
+		case ASYNC_TASK_LAUNCH_CHOOSER:
+			mProgDialog.setTitle(getString(R.string.launching_chooser));
 			break;
 		default:
 			Log.e(TAG, "Unknown task ID: " + taskId);
@@ -908,6 +879,17 @@ public class VolumeListActivity extends ListActivity {
 
 				// Acquire wake lock to prevent screen from dimming/timing out
 				wl.acquire();
+			}
+
+			// link or authenticate account if needed
+			Account account = mVolumeFileSystem.getAccount();
+			if (account != null) {
+				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
+					mErrDialogText = String.format(
+							getString(R.string.account_login_error),
+							mVolumeFileSystem.getName());
+					return null;
+				}
 			}
 
 			// Get file provider for this file system
@@ -1029,6 +1011,17 @@ public class VolumeListActivity extends ListActivity {
 			volumeName = args[1];
 			password = args[2];
 
+			// link or authenticate account if needed
+			Account account = volumeFs.getAccount();
+			if (account != null) {
+				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
+					mErrDialogText = String.format(
+							getString(R.string.account_login_error),
+							volumeFs.getName());
+					return false;
+				}
+			}
+
 			EncFSFileProvider rootProvider = volumeFs.getFileProvider("/");
 
 			try {
@@ -1109,6 +1102,17 @@ public class VolumeListActivity extends ListActivity {
 		@Override
 		protected Boolean doInBackground(String... args) {
 
+			// link or authenticate account if needed
+			Account account = volume.getFileSystem().getAccount();
+			if (account != null) {
+				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
+					mErrDialogText = String.format(
+							getString(R.string.account_login_error), volume
+									.getFileSystem().getName());
+					return false;
+				}
+			}
+
 			EncFSFileProvider rootProvider = volume.getFileSystem()
 					.getFileProvider("/");
 
@@ -1148,6 +1152,60 @@ public class VolumeListActivity extends ListActivity {
 				if (result) {
 					((VolumeListActivity) getActivity()).deleteVolume(volume);
 				} else {
+					((VolumeListActivity) getActivity())
+							.showDialog(DIALOG_ERROR);
+				}
+			}
+		}
+	}
+
+	private class LaunchChooserTask extends EDAsyncTask<String, Void, Boolean> {
+
+		// Selected volume index
+		private int item;
+
+		public LaunchChooserTask(ProgressDialog dialog, int item) {
+			super();
+			setProgressDialog(dialog);
+			this.item = item;
+		}
+
+		@Override
+		protected Boolean doInBackground(String... args) {
+
+			FileSystem fs = mApp.getFileSystemList().get(item);
+
+			// link or authenticate account if needed
+			Account account = fs.getAccount();
+			if (account != null) {
+				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
+					mErrDialogText = String.format(
+							getString(R.string.account_login_error),
+							fs.getName());
+					return false;
+				}
+			}
+
+			if (mVolumeOp == VOLUME_OP_IMPORT) {
+				launchFileChooser(FileChooserActivity.VOLUME_PICKER_MODE, item);
+			} else {
+				launchFileChooser(FileChooserActivity.CREATE_VOLUME_MODE, item);
+			}
+
+			return true;
+		}
+
+		// Run after the task is complete
+		@Override
+		protected void onPostExecute(Boolean result) {
+			super.onPostExecute(result);
+
+			if (myDialog.isShowing()) {
+				myDialog.dismiss();
+			}
+
+			if (!isCancelled()) {
+				if (!result) {
 					((VolumeListActivity) getActivity())
 							.showDialog(DIALOG_ERROR);
 				}

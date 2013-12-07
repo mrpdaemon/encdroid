@@ -83,6 +83,7 @@
     <string name="volume_list">Volume List</string>
     <string name="loading_contents">Loading contents</string>
     <string name="unlocking_volume">Unlocking volume</string>
+    <string name="launching_chooser">Launching file chooser</string>
     <string name="paste_fail">Failed to paste file(s)</string>
     <string name="delete_vol_dialog_confirm_str">Are you sure you want to delete volume \'%s\' ?</string>
     <string name="delete_vol_dialog_disk_str">Delete from disk</string>
@@ -96,5 +97,6 @@
     <string name="ext_sd_location_pref_sum_str">Filesystem path of the external SD card</string>
     <string name="ext_sd_vol_prefix_str">External SD</string>
     <string name="google_drive_login">Logged in to Google Drive</string>
-
+    <string name="google_drive_login_failed">Failed to log in to Google Drive</string>
+	<string name="google_drive_no_play_services">Google Play Services not available on device</string>
 </resources>
