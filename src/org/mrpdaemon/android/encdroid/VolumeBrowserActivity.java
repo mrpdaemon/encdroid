@@ -224,6 +224,9 @@ public class VolumeBrowserActivity extends ListActivity {
 	// Saved instance state for progress bar string argument
 	private String mSavedProgBarStrArg = null;
 
+	// Workaround for submenu issues in ListActivity's OnContextItemSelected()
+	private int mParentContextMenuListIndex;
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -275,6 +278,7 @@ public class VolumeBrowserActivity extends ListActivity {
 					public boolean onItemLongClick(AdapterView<?> adapterView,
 							View v, int position, long id) {
 						if (position != 0) {
+							VolumeBrowserActivity.this.mParentContextMenuListIndex = position - 1;
 							VolumeBrowserActivity.this.getListView()
 									.showContextMenu();
 						}
@@ -792,19 +796,28 @@ public class VolumeBrowserActivity extends ListActivity {
 	 */
 	@Override
 	public boolean onContextItemSelected(MenuItem item) {
-		AdapterContextMenuInfo info = (AdapterContextMenuInfo) item
-				.getMenuInfo();
+		AdapterContextMenuInfo info;
+
+		try {
+			info = (AdapterContextMenuInfo) item.getMenuInfo();
+		} catch (ClassCastException e) {
+			return false;
+		}
+
+		int idxOfList = (info != null) ? info.position
+				: this.mParentContextMenuListIndex;
+
 		switch (item.getItemId()) {
 		case R.id.volume_browser_menu_rename:
-			mSelectedFile = mAdapter.getItem((int) info.id);
+			mSelectedFile = mAdapter.getItem(idxOfList);
 			showDialog(DIALOG_FILE_RENAME);
 			return true;
 		case R.id.volume_browser_menu_delete:
-			mSelectedFile = mAdapter.getItem((int) info.id);
+			mSelectedFile = mAdapter.getItem(idxOfList);
 			showDialog(DIALOG_FILE_DELETE);
 			return true;
 		case R.id.volume_browser_menu_cut:
-			mSelectedFile = mAdapter.getItem((int) info.id);
+			mSelectedFile = mAdapter.getItem(idxOfList);
 			mPasteFile = mSelectedFile.getFile();
 			mPasteMode = PASTE_OP_CUT;
 
@@ -818,7 +831,7 @@ public class VolumeBrowserActivity extends ListActivity {
 
 			return true;
 		case R.id.volume_browser_menu_copy:
-			mSelectedFile = mAdapter.getItem((int) info.id);
+			mSelectedFile = mAdapter.getItem(idxOfList);
 			mPasteFile = mSelectedFile.getFile();
 			mPasteMode = PASTE_OP_COPY;
 
@@ -832,7 +845,7 @@ public class VolumeBrowserActivity extends ListActivity {
 
 			return true;
 		case R.id.volume_browser_menu_export:
-			mSelectedFile = mAdapter.getItem((int) info.id);
+			mSelectedFile = mAdapter.getItem(idxOfList);
 			mOpenFile = mSelectedFile.getFile();
 			mOpenFileName = mOpenFile.getName();
 
@@ -848,8 +861,10 @@ public class VolumeBrowserActivity extends ListActivity {
 			startActivityForResult(startFileExport, EXPORT_FILE_REQUEST);
 			return true;
 		default:
-			return super.onContextItemSelected(item);
+			break;
 		}
+
+		return super.onContextItemSelected(item);
 	}
 
 	/*
