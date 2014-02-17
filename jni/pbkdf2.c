@@ -23,7 +23,6 @@
 jbyteArray
 Java_org_mrpdaemon_android_encdroid_NativePBKDF2Provider_pbkdf2(JNIEnv *env,
 		                                                          jobject jobj,
-		                                                          jint pwd_len,
 		                                                          jstring password,
 		                                                          jint salt_len,
 		                                                          jbyteArray salt_data,
@@ -32,8 +31,10 @@ Java_org_mrpdaemon_android_encdroid_NativePBKDF2Provider_pbkdf2(JNIEnv *env,
 	jbyteArray ret;
 
 	// Grab pointers to the actual data for the array input parameters
-	const char *in_password = (*env)->GetStringUTFChars(env, password, 0);
+	const jbyte *in_password = (*env)->GetStringUTFChars(env, password, 0);
 	const jbyte *in_salt_data = (*env)->GetByteArrayElements(env, salt_data, 0);
+
+	jint pwd_len = strlen(in_password);
 
 	// Allocate and prepare the output parameter
 	ret = (*env)->NewByteArray(env, key_len);
