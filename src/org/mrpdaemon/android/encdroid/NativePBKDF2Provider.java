@@ -14,7 +14,7 @@ public class NativePBKDF2Provider extends EncFSPBKDF2Provider {
 		}
 	}
 
-	native byte[] pbkdf2(int passwordLen, String password, int saltLen,
+	native byte[] pbkdf2(String password, int saltLen,
 			byte[] salt, int iterations, int keyLen);
 
 	/* calling here forces class initialization */
@@ -25,6 +25,6 @@ public class NativePBKDF2Provider extends EncFSPBKDF2Provider {
 	public byte[] doPBKDF2(int passwordLen, String password, int saltLen,
 			byte[] salt, int iterations, int keyLen) {
 		Log.d("NativePBKDF2Provider", "Calling into native PBKDF2 function!");
-		return pbkdf2(passwordLen, password, saltLen, salt, iterations, keyLen);
+		return pbkdf2(password, saltLen, salt, iterations, keyLen);
 	}
 }
