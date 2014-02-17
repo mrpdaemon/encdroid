@@ -277,7 +277,12 @@ public class VolumeBrowserActivity extends ListActivity {
 					@Override
 					public boolean onItemLongClick(AdapterView<?> adapterView,
 							View v, int position, long id) {
-						if (position != 0) {
+						int startPos = 0;
+						// Account for the parent directory (..) item
+						if (mCurEncFSDir != mEncfsVolume.getRootDir()) {
+							startPos = 1;
+						}
+						if (position > startPos) {
 							VolumeBrowserActivity.this.mParentContextMenuListIndex = position - 1;
 							VolumeBrowserActivity.this.getListView()
 									.showContextMenu();
