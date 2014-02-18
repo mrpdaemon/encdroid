@@ -10,3 +10,4 @@ proguard-project.txt
 local.properties
 .vimrc
 cscope*
+libs/*.properties
