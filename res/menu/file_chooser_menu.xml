@@ -11,5 +11,10 @@
         android:icon="@drawable/ic_menu_refresh"
         android:showAsAction="ifRoom|withText"
         android:title="@string/menu_refresh"/>
+    <item
+        android:id="@+id/file_chooser_menu_import"
+        android:icon="@drawable/ic_menu_import_volume"
+        android:showAsAction="always"
+        android:title="@string/menu_import_vol"/>
 
 </menu>

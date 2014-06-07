@@ -54,6 +54,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class FileChooserActivity extends ListActivity {
 	// Parameter key for activity mode
@@ -78,6 +79,8 @@ public class FileChooserActivity extends ListActivity {
 
 	// Result key for the path returned by this activity
 	public final static String RESULT_KEY = "result_path";
+        
+        public final static String CONFIG_RESULT_KEY = "config_result_path";
 
 	// Name of the SD card directory for copying files into
 	public final static String ENCDROID_SD_DIR_NAME = "Encdroid";
@@ -90,6 +93,8 @@ public class FileChooserActivity extends ListActivity {
 
 	// Dialog ID's
 	private final static int DIALOG_AUTO_IMPORT = 0;
+	
+        private final static int DIALOG_BROWSE_CONFIG= 1;
 
 	// Adapter for the list
 	private FileChooserAdapter mAdapter = null;
@@ -99,9 +104,14 @@ public class FileChooserActivity extends ListActivity {
 
 	// What mode we're running in
 	private int mMode;
+	
+	private Boolean chooseConfigNext=false;
+	boolean configFileFound = false;
 
 	// Current directory
 	private String mCurrentDir;
+	
+        private String volumeHomeDir;
 
 	// The underlying FS this chooser
 	private FileSystem mFileSystem;
@@ -221,6 +231,12 @@ public class FileChooserActivity extends ListActivity {
 			item = menu.findItem(R.id.file_chooser_menu_refresh);
 			item.setVisible(false);
 		}
+		MenuItem item = menu.findItem(R.id.file_chooser_menu_import);
+		if (mMode == VOLUME_PICKER_MODE )
+			item.setVisible(true);
+		else
+			item.setVisible(false);
+
 
 		return super.onCreateOptionsMenu(menu);
 	}
@@ -267,6 +283,39 @@ public class FileChooserActivity extends ListActivity {
 					});
 			alertDialog = alertBuilder.create();
 			break;
+		case DIALOG_BROWSE_CONFIG: 
+			alertBuilder.setTitle(R.string.custom_import_str);
+			alertBuilder.setMessage(String
+					.format(getString(R.string.browse_config_dialog_str),
+							mCurrentDir));
+			alertBuilder.setPositiveButton(getString(R.string.btn_ok_str),
+					new DialogInterface.OnClickListener() {
+						public void onClick(DialogInterface dialog,
+								int whichButton) {
+							chooseConfigNext=true;
+							Toast.makeText(getApplicationContext(),
+									String.format(getString(R.string.browse_config_toast_str),
+									mCurrentDir),
+									Toast.LENGTH_LONG).show();
+						}
+					});
+			// Cancel button
+			alertBuilder.setNegativeButton(getString(R.string.btn_cancel_str),
+					new DialogInterface.OnClickListener() {
+						public void onClick(DialogInterface dialog,
+								int whichButton) {
+							dialog.cancel();
+							finish();
+						}
+					});
+			alertDialog = alertBuilder.create();
+			alertDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+				@Override
+				public void onCancel(DialogInterface dialogInterface) {
+					finish();
+				}
+			});
+                        break;
 		default:
 			Log.d(TAG, "Unknown dialog ID requested " + id);
 			return null;
@@ -284,6 +333,14 @@ public class FileChooserActivity extends ListActivity {
 			return true;
 		case R.id.file_chooser_menu_refresh:
 			launchFillTask();
+			return true;
+		case R.id.file_chooser_menu_import:
+			volumeHomeDir=mCurrentDir;
+			if(configFileFound)
+				returnResult(mCurrentDir);
+			else
+				showDialog(DIALOG_BROWSE_CONFIG);
+			item.setVisible(false);
 			return true;
 		case android.R.id.home:
 			Log.v(TAG, "Home icon clicked");
@@ -343,7 +400,7 @@ public class FileChooserActivity extends ListActivity {
 
 	private boolean fill() {
 
-		boolean configFileFound = false;
+		configFileFound=false;
 		List<EncFSFileInfo> childFiles = new ArrayList<EncFSFileInfo>();
 
 		try {
@@ -499,7 +556,7 @@ public class FileChooserActivity extends ListActivity {
 			}
 
 			if (result == true) {
-				if (mPrefs.getBoolean("auto_import", true)) {
+				if (mPrefs.getBoolean("auto_import", true) && !chooseConfigNext) {
 					showDialog(DIALOG_AUTO_IMPORT);
 				}
 			}
@@ -526,11 +583,23 @@ public class FileChooserActivity extends ListActivity {
 			mCurrentDir = selected.getPath();
 			launchFillTask();
 		} else {
-			if (mMode == VOLUME_PICKER_MODE) {
-				returnResult(mCurrentDir);
-			} else if (mMode == FILE_PICKER_MODE) {
-				returnResult(selected.getPath());
-			}
+                        if(!chooseConfigNext)
+                        {
+                            if (mMode == VOLUME_PICKER_MODE) {
+                                returnResult(mCurrentDir);
+                            } else if (mMode == FILE_PICKER_MODE) {
+                                returnResult(selected.getPath());
+                            }
+                        }
+                        else
+                        {
+                            Intent intent = this.getIntent();
+                            intent.putExtra(RESULT_KEY, volumeHomeDir);
+                            intent.putExtra(CONFIG_RESULT_KEY, selected.getPath());
+                            setResult(Activity.RESULT_OK, intent);
+                            finish();
+
+                        }
 		}
 	}
 
