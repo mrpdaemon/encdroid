@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.mrpdaemon.android.encdroid"
-    android:versionCode="1400204"
-    android:versionName="2.0.4" >
+    android:versionCode="1400205"
+    android:versionName="2.0.5" >
 
     <uses-sdk
         android:minSdkVersion="14"
