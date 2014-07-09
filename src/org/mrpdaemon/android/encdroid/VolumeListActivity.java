@@ -103,6 +103,7 @@ public class VolumeListActivity extends ListActivity {
 	// Saved instance state keys
 	private final static String SAVED_VOL_IDX_KEY = "vol_idx";
 	private final static String SAVED_VOL_PICK_RESULT_KEY = "vol_pick_result";
+	private final static String SAVED_VOL_PICK_CONFIG_RESULT_KEY = "vol_pick_config_result";
 	private final static String SAVED_CREATE_VOL_NAME_KEY = "create_vol_name";
 	private final static String SAVED_VOL_OP_KEY = "vol_op";
 	private final static String SAVED_VOL_FS_IDX_KEY = "vol_fs_idx";
@@ -181,6 +182,8 @@ public class VolumeListActivity extends ListActivity {
 
 			mVolPickerResult = savedInstanceState
 					.getString(SAVED_VOL_PICK_RESULT_KEY);
+			mVolConfigResult = savedInstanceState
+					.getString(SAVED_VOL_PICK_CONFIG_RESULT_KEY);
 			mCreateVolumeName = savedInstanceState
 					.getString(SAVED_CREATE_VOL_NAME_KEY);
 			mVolumeOp = savedInstanceState.getInt(SAVED_VOL_OP_KEY);
@@ -237,6 +240,7 @@ public class VolumeListActivity extends ListActivity {
 	protected void onSaveInstanceState(Bundle outState) {
 		outState.putInt(SAVED_VOL_IDX_KEY, mSelectedVolIdx);
 		outState.putString(SAVED_VOL_PICK_RESULT_KEY, mVolPickerResult);
+		outState.putString(SAVED_VOL_PICK_CONFIG_RESULT_KEY, mVolConfigResult);
 		outState.putString(SAVED_CREATE_VOL_NAME_KEY, mCreateVolumeName);
 		outState.putInt(SAVED_VOL_OP_KEY, mVolumeOp);
 		outState.putInt(SAVED_VOL_FS_IDX_KEY,
