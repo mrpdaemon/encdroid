@@ -49,7 +49,7 @@ public class Volume {
 		this.volume = null;
 	}
 	
-        public Volume(String name, String path, String configPath, FileSystem fileSystem) {
+	public Volume(String name, String path, String configPath, FileSystem fileSystem) {
 		super();
 		this.name = name;
 		this.path = path;

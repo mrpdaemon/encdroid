@@ -88,9 +88,9 @@
     <string name="delete_vol_dialog_confirm_str">Are you sure you want to delete volume \'%s\' ?</string>
     <string name="delete_vol_dialog_disk_str">Delete from disk</string>
     <string name="auto_import_vol_dialog_str">Import volume at \'%s\' ?</string>
-    <string name="browse_config_dialog_str">No encfs config found at \'%s\' \nBrowse for config file now?</string>
+    <string name="choose_config_dialog_str">Choose a config file:</string>
+    <string name="browse_config_dialog_str">No encfs config found at \'%s\' \nBrowse for a local config file now?</string>
     <string name="custom_import_str">Custom Import?</string>
-    <string name="browse_config_toast_str">Now Browsing config file for volume at: \n \"\'%s\'\".</string>
     <string name="auto_import_pref_title_str">Auto import volumes</string>
     <string name="auto_import_pref_sum_str">Ask to import volumes when an EncFS configuration file is found</string>
     <string name="ext_sd_enabled_pref_title_str">Enable external SD card</string>

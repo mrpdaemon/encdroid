@@ -179,15 +179,15 @@ public class DBHelper extends SQLiteOpenHelper {
 			do {
 				String volName = cursor.getString(nameColId);
 				String volPath = cursor.getString(pathColId);
-                String volConfigPath = cursor.getString(pathConfigColId);
+				String volConfigPath = cursor.getString(pathConfigColId);
 				int volFsIdx = cursor.getInt(typeColId);
 
 				Log.d(TAG, "getVolume() name: '" + volName + "' path: '"
 						+ volPath + "'");
-                Volume volume;
-                if(volConfigPath == null)
-				    volume = new Volume(volName, volPath, mApp
-						    .getFileSystemList().get(volFsIdx));
+				Volume volume;
+				if(volConfigPath == null)
+					volume = new Volume(volName, volPath, mApp
+							.getFileSystemList().get(volFsIdx));
 				else
 					volume =new Volume(volName, volPath, volConfigPath,
 							mApp.getFileSystemList().get(volFsIdx));

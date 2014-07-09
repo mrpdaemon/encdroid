@@ -103,6 +103,7 @@ public class VolumeListActivity extends ListActivity {
 	// Saved instance state keys
 	private final static String SAVED_VOL_IDX_KEY = "vol_idx";
 	private final static String SAVED_VOL_PICK_RESULT_KEY = "vol_pick_result";
+	private final static String SAVED_VOL_PICK_CONFIG_RESULT_KEY = "vol_pick_config_result";
 	private final static String SAVED_CREATE_VOL_NAME_KEY = "create_vol_name";
 	private final static String SAVED_VOL_OP_KEY = "vol_op";
 	private final static String SAVED_VOL_FS_IDX_KEY = "vol_fs_idx";
@@ -136,8 +137,8 @@ public class VolumeListActivity extends ListActivity {
 
 	// Result from the volume picker activity
 	private String mVolPickerResult = null;
-	
-        private String mVolConfigResult = null;
+
+	private String mVolConfigResult = null;
 
 	// Text for the error dialog
 	private String mErrDialogText = "";
@@ -181,6 +182,8 @@ public class VolumeListActivity extends ListActivity {
 
 			mVolPickerResult = savedInstanceState
 					.getString(SAVED_VOL_PICK_RESULT_KEY);
+			mVolConfigResult = savedInstanceState
+					.getString(SAVED_VOL_PICK_CONFIG_RESULT_KEY);
 			mCreateVolumeName = savedInstanceState
 					.getString(SAVED_CREATE_VOL_NAME_KEY);
 			mVolumeOp = savedInstanceState.getInt(SAVED_VOL_OP_KEY);
@@ -237,6 +240,7 @@ public class VolumeListActivity extends ListActivity {
 	protected void onSaveInstanceState(Bundle outState) {
 		outState.putInt(SAVED_VOL_IDX_KEY, mSelectedVolIdx);
 		outState.putString(SAVED_VOL_PICK_RESULT_KEY, mVolPickerResult);
+		outState.putString(SAVED_VOL_PICK_CONFIG_RESULT_KEY, mVolConfigResult);
 		outState.putString(SAVED_CREATE_VOL_NAME_KEY, mCreateVolumeName);
 		outState.putInt(SAVED_VOL_OP_KEY, mVolumeOp);
 		outState.putInt(SAVED_VOL_FS_IDX_KEY,
@@ -797,8 +801,8 @@ public class VolumeListActivity extends ListActivity {
 		mApp.getDbHelper().insertVolume(volume);
 		refreshList();
 	}
-	
-        private void importVolumeWithConfig(String volumeName, String volumePath,
+
+	private void importVolumeWithConfig(String volumeName, String volumePath,
 			String configPath, FileSystem fileSystem) {
 		Volume volume = new Volume(volumeName, volumePath, configPath, fileSystem);
 		mApp.getVolumeList().add(volume);
@@ -926,32 +930,31 @@ public class VolumeListActivity extends ListActivity {
 			}
 
 			// Get file provider for this file system
-			EncFSFileProvider fileProvider = mFileSystem
-					.getFileProvider(args[0]);
-					String providerPrefix=mFileSystem.getPathPrefix();
-					EncFSConfig volConfig = null;
-					if(args.length>2)
-					{
-						File config = new File(providerPrefix + args[2]);
-						try {
-							volConfig = EncFSConfigParser.parseFile(config );
-						} catch (EncFSInvalidConfigException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-						catch (EncFSUnsupportedException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						} catch (ParserConfigurationException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						} catch (SAXException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						} catch (IOException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
+						EncFSFileProvider fileProvider = mFileSystem
+							.getFileProvider(args[0]);
+						EncFSConfig volConfig = null;
+						if(args.length>2)
+						{
+							File config = new File(args[2]);
+							try {
+								volConfig = EncFSConfigParser.parseFile(config );
+							} catch (EncFSInvalidConfigException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+							catch (EncFSUnsupportedException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (ParserConfigurationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (SAXException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (IOException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
 					}
 		// Unlock the volume, takes long due to PBKDF2 calculation
 			try {
@@ -961,7 +964,7 @@ public class VolumeListActivity extends ListActivity {
 							.withFileProvider(fileProvider)
 							.withConfig(volConfig)
 							.withPassword(args[1]).buildVolume();
-				    } else {
+					} else {
 					volume = new EncFSVolumeBuilder()
 							.withFileProvider(fileProvider)
 							.withPbkdf2Provider(mApp.getNativePBKDF2Provider())
