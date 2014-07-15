@@ -192,12 +192,14 @@ public class DBHelper extends SQLiteOpenHelper {
 				Log.d(TAG, "getVolume() name: '" + volName + "' path: '"
 						+ volPath + "'");
 				Volume volume;
-				if(volConfigPath == null)
+				if(volConfigPath == null) {
 					volume = new Volume(volName, volPath, mApp
 							.getFileSystemList().get(volFsIdx));
-				else
-					volume =new Volume(volName, volPath, volConfigPath,
+				}
+				else {
+					volume = new Volume(volName, volPath, volConfigPath,
 							mApp.getFileSystemList().get(volFsIdx));
+				}
 
 				volumes.add(volume);
 			} while (cursor.moveToNext());

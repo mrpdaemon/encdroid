@@ -252,11 +252,12 @@ public class FileChooserActivity extends ListActivity {
 			item.setVisible(false);
 		}
 		MenuItem item = menu.findItem(R.id.file_chooser_menu_import);
-		if (mMode == VOLUME_PICKER_MODE )
+		if (mMode == VOLUME_PICKER_MODE ) {
 			item.setVisible(true);
-		else
+		}
+		else {
 			item.setVisible(false);
-
+		}
 
 		return super.onCreateOptionsMenu(menu);
 	}
@@ -331,7 +332,7 @@ public class FileChooserActivity extends ListActivity {
 					finish();
 				}
 			});
-                        break;
+			break;
 		default:
 			Log.d(TAG, "Unknown dialog ID requested " + id);
 			return null;
@@ -352,10 +353,12 @@ public class FileChooserActivity extends ListActivity {
 			return true;
 		case R.id.file_chooser_menu_import:
 			volumeHomeDir=mCurrentDir;
-			if(configFileFound)
+			if(configFileFound) {
 				returnResult(mCurrentDir);
-			else
+			}
+			else {
 				showDialog(DIALOG_BROWSE_CONFIG);
+			}
 			return true;
 		case android.R.id.home:
 			Log.v(TAG, "Home icon clicked");
@@ -541,8 +544,9 @@ public class FileChooserActivity extends ListActivity {
 
 	public void doPositiveClick(int item) {
 		File chosenFile = fileList[item];
-		if(chosenFile.isDirectory())
+		if(chosenFile.isDirectory()) {
 			showBrowseDialog(chosenFile.getAbsolutePath());
+		}
 		else{
 			configPath = chosenFile.getAbsolutePath();
 			Intent intent = this.getIntent();

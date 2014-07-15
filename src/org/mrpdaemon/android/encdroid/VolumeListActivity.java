@@ -487,13 +487,15 @@ public class VolumeListActivity extends ListActivity {
 										mVolumeFileSystem, null);
 								mAsyncTaskId = ASYNC_TASK_UNLOCK_PBKDF2;
 								mAsyncTask.setActivity(VolumeListActivity.this);
-								if(mSelectedVolume.getCustomConfigPath() == null)
+								if(mSelectedVolume.getCustomConfigPath() == null) {
 									mAsyncTask.execute(mSelectedVolume.getPath(),
-												value.toString());
-								else
+											value.toString());
+								}
+								else {
 									mAsyncTask.execute(mSelectedVolume.getPath(),
-												value.toString(),
-												mSelectedVolume.getCustomConfigPath());
+											value.toString(),
+											mSelectedVolume.getCustomConfigPath());
+								}
 								break;
 							case DIALOG_VOL_CREATEPASS:
 								// Show progress dialog
@@ -551,12 +553,14 @@ public class VolumeListActivity extends ListActivity {
 							Editable value = input.getText();
 							switch (myId) {
 							case DIALOG_VOL_NAME:
-								if(mVolConfigResult == null)
-								importVolume(value.toString(),
-										mVolPickerResult, mVolumeFileSystem);
-								else
-								importVolumeWithConfig(value.toString(),
-										mVolPickerResult,mVolConfigResult, mVolumeFileSystem);
+								if(mVolConfigResult == null) {
+									importVolume(value.toString(),
+											mVolPickerResult, mVolumeFileSystem);
+								}
+								else {
+									importVolumeWithConfig(value.toString(),
+											mVolPickerResult, mVolConfigResult, mVolumeFileSystem);
+								}
 								break;
 							case DIALOG_VOL_RENAME:
 								renameVolume(mSelectedVolume, value.toString());
@@ -843,11 +847,13 @@ public class VolumeListActivity extends ListActivity {
 					cachedKey);
 			mAsyncTaskId = ASYNC_TASK_UNLOCK_CACHE;
 			mAsyncTask.setActivity(VolumeListActivity.this);
-			if(mSelectedVolume.getCustomConfigPath() == null)
-				mAsyncTask.execute(mSelectedVolume.getPath(),null);
-			else
-				mAsyncTask.execute(mSelectedVolume.getPath(),null,
-				mSelectedVolume.getCustomConfigPath());
+			if(mSelectedVolume.getCustomConfigPath() == null) {
+				mAsyncTask.execute(mSelectedVolume.getPath(), null);
+			}
+			else {
+				mAsyncTask.execute(mSelectedVolume.getPath(), null,
+						mSelectedVolume.getCustomConfigPath());
+			}
 		}
 	}
 
