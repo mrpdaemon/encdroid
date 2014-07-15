@@ -38,7 +38,7 @@ public class DBHelper extends SQLiteOpenHelper {
 	public static final String DB_NAME = "volume.db";
 
 	// Database version
-	public static final int DB_VERSION = 3;
+	public static final int DB_VERSION = 4;
 
 	// Volume table name
 	public static final String DB_TABLE = "volumes";
@@ -66,16 +66,23 @@ public class DBHelper extends SQLiteOpenHelper {
 	public void onCreate(SQLiteDatabase db) {
 		String sqlCmd = "CREATE TABLE " + DB_TABLE + " (" + DB_COL_ID
 				+ " int primary key, " + DB_COL_NAME + " text, " + DB_COL_PATH
-				+ " text, " + DB_COL_KEY + " text, " + DB_COL_CONFIGPATH + " text, " + DB_COL_TYPE + " int)";
+				+ " text, " + DB_COL_KEY + " text, " + DB_COL_TYPE + " int, " + DB_COL_CONFIGPATH + " text)";
 		Log.d(TAG, "onCreate() executing SQL: " + sqlCmd);
 		db.execSQL(sqlCmd);
 	}
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		db.execSQL("DROP TABLE IF EXISTS " + DB_TABLE);
-		Log.d(TAG, "onUpgrade() recreating DB");
-		onCreate(db);
+		//Adding column DB_COL_CONFIGPATH on upgrade
+		if (oldVersion == 3) {
+			Log.d(TAG, "onUpgrade() Upgrading DB");
+			db.execSQL("ALTER TABLE " + DB_TABLE + " ADD COLUMN " + DB_COL_CONFIGPATH + " TEXT");
+		}
+		else{
+			db.execSQL("DROP TABLE IF EXISTS " + DB_TABLE);
+			Log.d(TAG, "onUpgrade() recreating DB");
+			onCreate(db);
+		}
 	}
 
 	public void insertVolume(Volume volume) {
