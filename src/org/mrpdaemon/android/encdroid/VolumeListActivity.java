@@ -138,6 +138,7 @@ public class VolumeListActivity extends ListActivity {
 	// Result from the volume picker activity
 	private String mVolPickerResult = null;
 
+	// Result from the volume picker activity returning custom config path
 	private String mVolConfigResult = null;
 
 	// Text for the error dialog
