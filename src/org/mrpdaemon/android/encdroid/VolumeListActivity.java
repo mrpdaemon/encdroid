@@ -938,22 +938,10 @@ public class VolumeListActivity extends ListActivity {
 							File config = new File(args[2]);
 							try {
 								volConfig = EncFSConfigParser.parseFile(config );
-							} catch (EncFSInvalidConfigException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}
-							catch (EncFSUnsupportedException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							} catch (ParserConfigurationException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							} catch (SAXException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							} catch (IOException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
+							} catch (Exception e) {
+								Logger.logException(TAG, e);
+								((VolumeListActivity) getActivity()).mErrDialogText = e
+										.getMessage();
 							}
 					}
 		// Unlock the volume, takes long due to PBKDF2 calculation
