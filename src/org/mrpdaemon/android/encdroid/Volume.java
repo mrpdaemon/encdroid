@@ -36,11 +36,24 @@ public class Volume {
 
 	// EncFS volume associated with this volume
 	private EncFSVolume volume;
+	
+	private String customConfigPath=null;
 
 	public Volume(String name, String path, FileSystem fileSystem) {
 		super();
 		this.name = name;
 		this.path = path;
+		this.customConfigPath=null;
+		this.fileSystem = fileSystem;
+		this.isLocked = true;
+		this.volume = null;
+	}
+	
+	public Volume(String name, String path, String configPath, FileSystem fileSystem) {
+		super();
+		this.name = name;
+		this.path = path;
+		this.customConfigPath=configPath;
 		this.fileSystem = fileSystem;
 		this.isLocked = true;
 		this.volume = null;
@@ -96,6 +109,13 @@ public class Volume {
 	 */
 	public boolean isLocked() {
 		return isLocked;
+	}
+	
+	/**
+	 * @return the customConfigPath
+	 */
+	public String getCustomConfigPath() {
+		return customConfigPath;
 	}
 
 	/**

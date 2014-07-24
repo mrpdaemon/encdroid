@@ -19,12 +19,20 @@
 package org.mrpdaemon.android.encdroid;
 
 import java.io.IOException;
+import java.io.File;
+import javax.xml.parsers.ParserConfigurationException;
 
+import org.mrpdaemon.sec.encfs.EncFSConfig;
 import org.mrpdaemon.sec.encfs.EncFSConfigFactory;
+import org.mrpdaemon.sec.encfs.EncFSConfigParser;
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
+import org.mrpdaemon.sec.encfs.EncFSInvalidConfigException;
 import org.mrpdaemon.sec.encfs.EncFSInvalidPasswordException;
+import org.mrpdaemon.sec.encfs.EncFSUnsupportedException;
 import org.mrpdaemon.sec.encfs.EncFSVolume;
 import org.mrpdaemon.sec.encfs.EncFSVolumeBuilder;
+import org.xml.sax.SAXException;
+
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -95,6 +103,7 @@ public class VolumeListActivity extends ListActivity {
 	// Saved instance state keys
 	private final static String SAVED_VOL_IDX_KEY = "vol_idx";
 	private final static String SAVED_VOL_PICK_RESULT_KEY = "vol_pick_result";
+	private final static String SAVED_VOL_PICK_CONFIG_RESULT_KEY = "vol_pick_config_result";
 	private final static String SAVED_CREATE_VOL_NAME_KEY = "create_vol_name";
 	private final static String SAVED_VOL_OP_KEY = "vol_op";
 	private final static String SAVED_VOL_FS_IDX_KEY = "vol_fs_idx";
@@ -128,6 +137,9 @@ public class VolumeListActivity extends ListActivity {
 
 	// Result from the volume picker activity
 	private String mVolPickerResult = null;
+
+	// Result from the volume picker activity returning custom config path
+	private String mVolConfigResult = null;
 
 	// Text for the error dialog
 	private String mErrDialogText = "";
@@ -171,6 +183,8 @@ public class VolumeListActivity extends ListActivity {
 
 			mVolPickerResult = savedInstanceState
 					.getString(SAVED_VOL_PICK_RESULT_KEY);
+			mVolConfigResult = savedInstanceState
+					.getString(SAVED_VOL_PICK_CONFIG_RESULT_KEY);
 			mCreateVolumeName = savedInstanceState
 					.getString(SAVED_CREATE_VOL_NAME_KEY);
 			mVolumeOp = savedInstanceState.getInt(SAVED_VOL_OP_KEY);
@@ -227,6 +241,7 @@ public class VolumeListActivity extends ListActivity {
 	protected void onSaveInstanceState(Bundle outState) {
 		outState.putInt(SAVED_VOL_IDX_KEY, mSelectedVolIdx);
 		outState.putString(SAVED_VOL_PICK_RESULT_KEY, mVolPickerResult);
+		outState.putString(SAVED_VOL_PICK_CONFIG_RESULT_KEY, mVolConfigResult);
 		outState.putString(SAVED_CREATE_VOL_NAME_KEY, mCreateVolumeName);
 		outState.putInt(SAVED_VOL_OP_KEY, mVolumeOp);
 		outState.putInt(SAVED_VOL_FS_IDX_KEY,
@@ -473,8 +488,15 @@ public class VolumeListActivity extends ListActivity {
 										mVolumeFileSystem, null);
 								mAsyncTaskId = ASYNC_TASK_UNLOCK_PBKDF2;
 								mAsyncTask.setActivity(VolumeListActivity.this);
-								mAsyncTask.execute(mSelectedVolume.getPath(),
-										value.toString());
+								if(mSelectedVolume.getCustomConfigPath() == null) {
+									mAsyncTask.execute(mSelectedVolume.getPath(),
+											value.toString());
+								}
+								else {
+									mAsyncTask.execute(mSelectedVolume.getPath(),
+											value.toString(),
+											mSelectedVolume.getCustomConfigPath());
+								}
 								break;
 							case DIALOG_VOL_CREATEPASS:
 								// Show progress dialog
@@ -532,8 +554,14 @@ public class VolumeListActivity extends ListActivity {
 							Editable value = input.getText();
 							switch (myId) {
 							case DIALOG_VOL_NAME:
-								importVolume(value.toString(),
-										mVolPickerResult, mVolumeFileSystem);
+								if(mVolConfigResult == null) {
+									importVolume(value.toString(),
+											mVolPickerResult, mVolumeFileSystem);
+								}
+								else {
+									importVolumeWithConfig(value.toString(),
+											mVolPickerResult, mVolConfigResult, mVolumeFileSystem);
+								}
 								break;
 							case DIALOG_VOL_RENAME:
 								renameVolume(mSelectedVolume, value.toString());
@@ -689,6 +717,8 @@ public class VolumeListActivity extends ListActivity {
 
 			mVolPickerResult = data.getExtras().getString(
 					FileChooserActivity.RESULT_KEY);
+			mVolConfigResult= data.getExtras().getString(
+					FileChooserActivity.CONFIG_RESULT_KEY);
 
 			switch (requestCode) {
 			case VOLUME_PICKER_REQUEST:
@@ -777,6 +807,14 @@ public class VolumeListActivity extends ListActivity {
 		refreshList();
 	}
 
+	private void importVolumeWithConfig(String volumeName, String volumePath,
+			String configPath, FileSystem fileSystem) {
+		Volume volume = new Volume(volumeName, volumePath, configPath, fileSystem);
+		mApp.getVolumeList().add(volume);
+		mApp.getDbHelper().insertVolume(volume);
+		refreshList();
+	}
+
 	private void deleteVolume(Volume volume) {
 		mApp.getVolumeList().remove(volume);
 		mApp.getDbHelper().deleteVolume(volume);
@@ -810,7 +848,13 @@ public class VolumeListActivity extends ListActivity {
 					cachedKey);
 			mAsyncTaskId = ASYNC_TASK_UNLOCK_CACHE;
 			mAsyncTask.setActivity(VolumeListActivity.this);
-			mAsyncTask.execute(mSelectedVolume.getPath(), null);
+			if(mSelectedVolume.getCustomConfigPath() == null) {
+				mAsyncTask.execute(mSelectedVolume.getPath(), null);
+			}
+			else {
+				mAsyncTask.execute(mSelectedVolume.getPath(), null,
+						mSelectedVolume.getCustomConfigPath());
+			}
 		}
 	}
 
@@ -893,21 +937,46 @@ public class VolumeListActivity extends ListActivity {
 			}
 
 			// Get file provider for this file system
-			EncFSFileProvider fileProvider = mFileSystem
-					.getFileProvider(args[0]);
-
-			// Unlock the volume, takes long due to PBKDF2 calculation
+						EncFSFileProvider fileProvider = mFileSystem
+							.getFileProvider(args[0]);
+						EncFSConfig volConfig = null;
+						if(args.length>2)
+						{
+							File config = new File(args[2]);
+							try {
+								volConfig = EncFSConfigParser.parseFile(config );
+							} catch (Exception e) {
+								Logger.logException(TAG, e);
+								((VolumeListActivity) getActivity()).mErrDialogText = e
+										.getMessage();
+							}
+					}
+		// Unlock the volume, takes long due to PBKDF2 calculation
 			try {
 				if (cachedKey == null) {
+					if(volConfig != null) {
+					volume = new EncFSVolumeBuilder()
+							.withFileProvider(fileProvider)
+							.withConfig(volConfig)
+							.withPassword(args[1]).buildVolume();
+					} else {
 					volume = new EncFSVolumeBuilder()
 							.withFileProvider(fileProvider)
 							.withPbkdf2Provider(mApp.getNativePBKDF2Provider())
 							.withPassword(args[1]).buildVolume();
-				} else {
-					volume = new EncFSVolumeBuilder()
-							.withFileProvider(fileProvider)
-							.withDerivedKeyData(cachedKey).buildVolume();
-				}
+					}
+					} else {
+						if(volConfig != null) {
+							volume = new EncFSVolumeBuilder()
+								.withFileProvider(fileProvider)
+								.withConfig(volConfig)
+								.withDerivedKeyData(cachedKey).buildVolume();
+							} else {
+								volume = new EncFSVolumeBuilder()
+									.withFileProvider(fileProvider)
+									.withDerivedKeyData(cachedKey).buildVolume();
+							}
+						}
 			} catch (EncFSInvalidPasswordException e) {
 				if (cachedKey != null) {
 					invalidCachedKey = true;

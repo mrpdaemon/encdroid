@@ -38,7 +38,7 @@ public class DBHelper extends SQLiteOpenHelper {
 	public static final String DB_NAME = "volume.db";
 
 	// Database version
-	public static final int DB_VERSION = 3;
+	public static final int DB_VERSION = 4;
 
 	// Volume table name
 	public static final String DB_TABLE = "volumes";
@@ -47,6 +47,7 @@ public class DBHelper extends SQLiteOpenHelper {
 	public static final String DB_COL_ID = BaseColumns._ID;
 	public static final String DB_COL_NAME = "name";
 	public static final String DB_COL_PATH = "path";
+	public static final String DB_COL_CONFIGPATH = "configPath";
 	public static final String DB_COL_TYPE = "type";
 	public static final String DB_COL_KEY = "key";
 
@@ -65,16 +66,23 @@ public class DBHelper extends SQLiteOpenHelper {
 	public void onCreate(SQLiteDatabase db) {
 		String sqlCmd = "CREATE TABLE " + DB_TABLE + " (" + DB_COL_ID
 				+ " int primary key, " + DB_COL_NAME + " text, " + DB_COL_PATH
-				+ " text, " + DB_COL_KEY + " text, " + DB_COL_TYPE + " int)";
+				+ " text, " + DB_COL_KEY + " text, " + DB_COL_TYPE + " int, " + DB_COL_CONFIGPATH + " text)";
 		Log.d(TAG, "onCreate() executing SQL: " + sqlCmd);
 		db.execSQL(sqlCmd);
 	}
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		db.execSQL("DROP TABLE IF EXISTS " + DB_TABLE);
-		Log.d(TAG, "onUpgrade() recreating DB");
-		onCreate(db);
+		//Adding column DB_COL_CONFIGPATH on upgrade
+		if (oldVersion == 3) {
+			Log.d(TAG, "onUpgrade() Upgrading DB");
+			db.execSQL("ALTER TABLE " + DB_TABLE + " ADD COLUMN " + DB_COL_CONFIGPATH + " TEXT");
+		}
+		else{
+			db.execSQL("DROP TABLE IF EXISTS " + DB_TABLE);
+			Log.d(TAG, "onUpgrade() recreating DB");
+			onCreate(db);
+		}
 	}
 
 	public void insertVolume(Volume volume) {
@@ -84,6 +92,7 @@ public class DBHelper extends SQLiteOpenHelper {
 		values.clear();
 		values.put(DB_COL_NAME, volume.getName());
 		values.put(DB_COL_PATH, volume.getPath());
+		values.put(DB_COL_CONFIGPATH, volume.getCustomConfigPath());
 		values.put(DB_COL_TYPE, mApp.getFSIndex(volume.getFileSystem()));
 
 		Log.d(TAG, "insertVolume() name: '" + volume.getName() + "' path: '"
@@ -171,18 +180,26 @@ public class DBHelper extends SQLiteOpenHelper {
 		int nameColId = cursor.getColumnIndex(DB_COL_NAME);
 		int pathColId = cursor.getColumnIndex(DB_COL_PATH);
 		int typeColId = cursor.getColumnIndex(DB_COL_TYPE);
+		int pathConfigColId = cursor.getColumnIndex(DB_COL_CONFIGPATH);
 
 		if (cursor.moveToFirst()) {
 			do {
 				String volName = cursor.getString(nameColId);
 				String volPath = cursor.getString(pathColId);
+				String volConfigPath = cursor.getString(pathConfigColId);
 				int volFsIdx = cursor.getInt(typeColId);
 
 				Log.d(TAG, "getVolume() name: '" + volName + "' path: '"
 						+ volPath + "'");
-
-				Volume volume = new Volume(volName, volPath, mApp
-						.getFileSystemList().get(volFsIdx));
+				Volume volume;
+				if(volConfigPath == null) {
+					volume = new Volume(volName, volPath, mApp
+							.getFileSystemList().get(volFsIdx));
+				}
+				else {
+					volume = new Volume(volName, volPath, volConfigPath,
+							mApp.getFileSystemList().get(volFsIdx));
+				}
 
 				volumes.add(volume);
 			} while (cursor.moveToNext());
