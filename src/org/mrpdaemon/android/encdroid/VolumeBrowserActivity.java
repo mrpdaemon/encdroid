@@ -69,6 +69,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.AdapterView.OnItemLongClickListener;
@@ -631,7 +632,8 @@ public class VolumeBrowserActivity extends ListActivity {
 		switch (id) {
 		case DIALOG_FILE_RENAME: // Rename file dialog
 
-			input = (EditText) inflater.inflate(R.layout.dialog_edit, null);
+			input = (EditText) inflater.inflate(R.layout.dialog_edit,
+					(ViewGroup) findViewById(R.layout.file_chooser));
 
 			alertBuilder.setTitle(getString(R.string.frename_dialog_title_str));
 			alertBuilder.setView(input);
@@ -665,7 +667,8 @@ public class VolumeBrowserActivity extends ListActivity {
 			break;
 		case DIALOG_CREATE_FOLDER: // Create folder dialog
 
-			input = (EditText) inflater.inflate(R.layout.dialog_edit, null);
+			input = (EditText) inflater.inflate(R.layout.dialog_edit,
+					(ViewGroup) findViewById(R.layout.file_chooser));
 
 			alertBuilder.setTitle(getString(R.string.mkdir_dialog_input_str));
 			alertBuilder.setView(input);
