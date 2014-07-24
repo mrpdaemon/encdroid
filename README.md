@@ -1,3 +1,10 @@
+Deprecation notice
+==================
+
+Note that support for Android versions older than 4.0 (which is what this branch
+does) is deprecated. No new features will be added - only bugfixes and security
+updates will be ported.
+
 Encdroid
 ========
 
