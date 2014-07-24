@@ -29,7 +29,6 @@ import org.mrpdaemon.sec.encfs.EncFSInvalidPasswordException;
 import org.mrpdaemon.sec.encfs.EncFSVolume;
 import org.mrpdaemon.sec.encfs.EncFSVolumeBuilder;
 
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -59,6 +58,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -455,7 +455,8 @@ public class VolumeListActivity extends ListActivity {
 			}
 			// Fall through
 		case DIALOG_VOL_CREATEPASS: // Create volume password
-			input = (EditText) inflater.inflate(R.layout.dialog_edit, null);
+			input = (EditText) inflater.inflate(R.layout.dialog_edit,
+					(ViewGroup) findViewById(R.layout.volume_list));
 
 			// Hide password input
 			input.setTransformationMethod(new PasswordTransformationMethod());
@@ -539,7 +540,8 @@ public class VolumeListActivity extends ListActivity {
 		case DIALOG_VOL_CREATE:
 		case DIALOG_VOL_NAME: // Volume name dialog
 
-			input = (EditText) inflater.inflate(R.layout.dialog_edit, null);
+			input = (EditText) inflater.inflate(R.layout.dialog_edit,
+					(ViewGroup) findViewById(R.layout.volume_list));
 
 			alertBuilder.setTitle(getString(R.string.voladd_dialog_title_str));
 			alertBuilder.setView(input);
