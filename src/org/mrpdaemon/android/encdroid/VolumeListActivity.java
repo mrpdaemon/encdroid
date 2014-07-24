@@ -20,18 +20,14 @@ package org.mrpdaemon.android.encdroid;
 
 import java.io.IOException;
 import java.io.File;
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.mrpdaemon.sec.encfs.EncFSConfig;
 import org.mrpdaemon.sec.encfs.EncFSConfigFactory;
 import org.mrpdaemon.sec.encfs.EncFSConfigParser;
 import org.mrpdaemon.sec.encfs.EncFSFileProvider;
-import org.mrpdaemon.sec.encfs.EncFSInvalidConfigException;
 import org.mrpdaemon.sec.encfs.EncFSInvalidPasswordException;
-import org.mrpdaemon.sec.encfs.EncFSUnsupportedException;
 import org.mrpdaemon.sec.encfs.EncFSVolume;
 import org.mrpdaemon.sec.encfs.EncFSVolumeBuilder;
-import org.xml.sax.SAXException;
 
 
 import android.annotation.SuppressLint;
