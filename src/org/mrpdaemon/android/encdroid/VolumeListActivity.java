@@ -49,7 +49,6 @@ import android.text.Editable;
 import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
-import android.util.SparseBooleanArray;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.KeyEvent;
@@ -62,6 +61,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
@@ -422,6 +422,25 @@ public class VolumeListActivity extends ListActivity {
 			});
 
 			break;
+		case DIALOG_VOL_DELETE:
+
+			TextView confirmText = (TextView) dialog
+					.findViewById(R.id.dialog_confirm_text);
+			CheckBox confirmCheck = (CheckBox) dialog
+					.findViewById(R.id.dialog_confirm_check);
+
+			// Fix the dialog title
+			dialog.setTitle(String.format(
+					getString(R.string.delete_vol_dialog_confirm_str),
+					mSelectedVolume.getName()));
+
+			// Fix the volume type
+			confirmText.setText(String.format(
+					getString(R.string.delete_vol_dialog_disk_str),
+					mSelectedVolume.getFileSystem().getName()));
+
+			confirmCheck.setChecked(true);
+			break;
 		case DIALOG_ERROR:
 			// Refresh error text
 			((AlertDialog) dialog).setMessage(mErrDialogText);
@@ -618,27 +637,31 @@ public class VolumeListActivity extends ListActivity {
 				return null;
 			}
 
-			final CharSequence[] items = { String.format(
-					getString(R.string.delete_vol_dialog_disk_str),
-					mSelectedVolume.getFileSystem().getName()) };
-			final boolean[] states = { true };
-
 			alertBuilder.setTitle(String.format(
 					getString(R.string.delete_vol_dialog_confirm_str),
 					mSelectedVolume.getName()));
-			alertBuilder.setMultiChoiceItems(items, states,
-					new DialogInterface.OnMultiChoiceClickListener() {
-						public void onClick(DialogInterface dialogInterface,
-								int item, boolean state) {
-						}
-					});
+
+			View confirmView = inflater.inflate(R.layout.dialog_confirm,
+					(ViewGroup) findViewById(R.layout.volume_list));
+
+			TextView confirmText = (TextView) confirmView
+					.findViewById(R.id.dialog_confirm_text);
+			confirmText.setText(String.format(
+					getString(R.string.delete_vol_dialog_disk_str),
+					mSelectedVolume.getFileSystem().getName()));
+
+			final CheckBox confirmCheck = (CheckBox) confirmView
+					.findViewById(R.id.dialog_confirm_check);
+			confirmCheck.setChecked(true);
+
+			alertBuilder.setView(confirmView);
+
 			alertBuilder.setPositiveButton(getString(R.string.btn_ok_str),
 					new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog,
 								int whichButton) {
-							SparseBooleanArray checked = ((AlertDialog) dialog)
-									.getListView().getCheckedItemPositions();
-							if (checked.get(0)) {
+
+							if (confirmCheck.isChecked()) {
 								// Delete volume from disk
 								createProgressBarForTask(ASYNC_TASK_DELETE,
 										mSelectedVolume.getName());
