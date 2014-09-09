@@ -30,6 +30,9 @@ public abstract class EDAsyncTask<Params, Progress, Result> extends
 	// The activity for this task
 	private Activity myActivity = null;
 
+	// The current file being operated on
+	protected String fileInProgress = null;
+
 	public ProgressDialog getProgressDialog() {
 		return myDialog;
 	}
@@ -57,10 +60,9 @@ public abstract class EDAsyncTask<Params, Progress, Result> extends
 			myDialog.setMax(max);
 		}
 	}
-
-	public void setProgressMessage(String message) {
-		if (myDialog != null) {
-			myDialog.setMessage(message);
-		}
+	
+	public void setFileInProgress(String fileName) {
+		fileInProgress = fileName;
+		publishProgress((Progress[]) null);
 	}
 }

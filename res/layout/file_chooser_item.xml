@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<org.mrpdaemon.android.encdroid.CheckableLinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal" >
+    android:orientation="horizontal"
+    android:background="@color/file_chooser_item">
 
     <ImageView
         android:id="@+id/file_chooser_item_icon"
@@ -17,6 +18,7 @@
 
     <TextView
         android:id="@+id/file_chooser_item_name"
+        android:duplicateParentState="true"
         android:layout_width="0dip"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
@@ -27,10 +29,11 @@
 
     <TextView
         android:id="@+id/file_chooser_item_size"
+        android:duplicateParentState="true"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="right|center_vertical"
         android:singleLine="true"
         android:textSize="14sp" />
 
-</LinearLayout>
+</org.mrpdaemon.android.encdroid.CheckableLinearLayout>

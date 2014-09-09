@@ -50,12 +50,7 @@ public class ProgressListener extends EncFSProgressListener {
 			});
 			break;
 		case ProgressListener.NEW_FILE_EVENT:
-			activity.runOnUiThread(new Runnable() {
-				@Override
-				public void run() {
-					myTask.setProgressMessage(getCurrentFile());
-				}
-			});
+			myTask.setFileInProgress(getCurrentFile());
 			break;
 		case ProgressListener.FILE_PROCESS_EVENT:
 			activity.runOnUiThread(new Runnable() {

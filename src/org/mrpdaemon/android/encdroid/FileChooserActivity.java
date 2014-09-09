@@ -43,6 +43,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.util.SparseBooleanArray;
+import android.view.ActionMode;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.ViewGroup.LayoutParams;
@@ -52,6 +54,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AbsListView.MultiChoiceModeListener;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -142,6 +145,9 @@ public class FileChooserActivity extends ListActivity {
 	// Shared preferences
 	private SharedPreferences mPrefs = null;
 
+	// List of files that are selected
+	private ArrayList<String> mSelectedFileList;
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -181,6 +187,9 @@ public class FileChooserActivity extends ListActivity {
 		}
 
 		mCurFileList = new ArrayList<FileChooserItem>();
+		mAdapter = new FileChooserAdapter(this, R.layout.file_chooser_item,
+				mCurFileList);
+		setListAdapter(mAdapter);
 
 		mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -194,7 +203,112 @@ public class FileChooserActivity extends ListActivity {
 
 		launchFillTask();
 
-		registerForContextMenu(this.getListView());
+		if (mMode != FILE_PICKER_MODE) {
+			registerForContextMenu(this.getListView());
+		} else {
+			mSelectedFileList = new ArrayList<String>();
+
+			this.getListView().setChoiceMode(
+					ListView.CHOICE_MODE_MULTIPLE_MODAL);
+
+			this.getListView().setMultiChoiceModeListener(
+					new MultiChoiceModeListener() {
+
+						// Map of clicked items
+						private SparseBooleanArray clickIndex = new SparseBooleanArray();
+						private int numSelected = 0;
+
+						// Save list of EncFSFile for selected items in
+						// mSelectedFileList
+						private void generateSelectedFileList() {
+							mSelectedFileList.clear();
+
+							for (int i = 0; i < numSelected; i++) {
+								mSelectedFileList.add(mAdapter.getItem(
+										clickIndex.keyAt(i) - 1).getPath());
+							}
+						}
+
+						@Override
+						public boolean onCreateActionMode(ActionMode mode,
+								Menu menu) {
+							mode.getMenuInflater().inflate(
+									R.menu.file_chooser_import, menu);
+							return true;
+						}
+
+						@Override
+						public boolean onPrepareActionMode(ActionMode mode,
+								Menu menu) {
+							return true;
+						}
+
+						@Override
+						public boolean onActionItemClicked(ActionMode mode,
+								MenuItem item) {
+
+							generateSelectedFileList();
+
+							switch (item.getItemId()) {
+							case R.id.file_chooser_menu_import:
+								Log.d(TAG, "Import clicked");
+								mode.finish();
+
+								Intent intent = FileChooserActivity.this
+										.getIntent();
+								intent.putStringArrayListExtra(RESULT_KEY,
+										mSelectedFileList);
+								setResult(Activity.RESULT_OK, intent);
+								finish();
+
+								return true;
+							default:
+								return false;
+							}
+						}
+
+						@Override
+						public void onDestroyActionMode(ActionMode mode) {
+							Log.d(TAG, "Action mode destroyed");
+							numSelected = 0;
+							clickIndex.clear();
+						}
+
+						@Override
+						public void onItemCheckedStateChanged(ActionMode mode,
+								int position, long id, boolean checked) {
+							Log.d(TAG, "click at position: " + position);
+
+							if (position != 0) {
+								if (clickIndex.get(position)) {
+									numSelected--;
+								} else {
+									numSelected++;
+								}
+
+								clickIndex.put(position,
+										!clickIndex.get(position));
+
+								if (numSelected > 0) {
+									mode.setTitle(String
+											.format(getString(R.string.multi_select_num_selected),
+													numSelected));
+								}
+
+								mode.invalidate();
+							} else {
+								if (numSelected == 0) {
+									/*
+									 * We don't want the header item to trigger
+									 * the multi selection mode when long
+									 * pressed.
+									 */
+									mode.finish();
+								}
+							}
+						}
+					});
+		}
 
 		getActionBar().setDisplayHomeAsUpEnabled(true);
 		getActionBar().setIcon(mFileSystem.getIconResId());
@@ -739,7 +853,12 @@ public class FileChooserActivity extends ListActivity {
 			if (mMode == VOLUME_PICKER_MODE) {
 				returnResult(mCurrentDir);
 			} else if (mMode == FILE_PICKER_MODE) {
-				returnResult(selected.getPath());
+				Intent intent = FileChooserActivity.this.getIntent();
+				ArrayList<String> resultList = new ArrayList<String>();
+				resultList.add(selected.getPath());
+				intent.putStringArrayListExtra(RESULT_KEY, resultList);
+				setResult(Activity.RESULT_OK, intent);
+				finish();
 			}
 		}
 	}
