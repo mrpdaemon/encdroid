@@ -186,6 +186,11 @@ public class FileChooserActivity extends ListActivity {
 			}
 		}
 
+		mListHeader = new TextView(this);
+		mListHeader.setTypeface(null, Typeface.BOLD);
+		mListHeader.setTextSize(16);
+		this.getListView().addHeaderView(mListHeader);
+
 		mCurFileList = new ArrayList<FileChooserItem>();
 		mAdapter = new FileChooserAdapter(this, R.layout.file_chooser_item,
 				mCurFileList);
@@ -312,11 +317,6 @@ public class FileChooserActivity extends ListActivity {
 
 		getActionBar().setDisplayHomeAsUpEnabled(true);
 		getActionBar().setIcon(mFileSystem.getIconResId());
-
-		mListHeader = new TextView(this);
-		mListHeader.setTypeface(null, Typeface.BOLD);
-		mListHeader.setTextSize(16);
-		this.getListView().addHeaderView(mListHeader);
 
 		// Set title text
 		switch (mMode) {

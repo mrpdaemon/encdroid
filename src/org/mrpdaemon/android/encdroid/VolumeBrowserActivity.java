@@ -225,6 +225,16 @@ public class VolumeBrowserActivity extends ListActivity {
 
 		mApp = (EDApplication) getApplication();
 
+		// Restore UI elements
+		super.onCreate(savedInstanceState);
+
+		setContentView(R.layout.file_chooser);
+
+		mListHeader = new TextView(this);
+		mListHeader.setTypeface(null, Typeface.BOLD);
+		mListHeader.setTextSize(16);
+		this.getListView().addHeaderView(mListHeader);
+
 		mCurFileList = new ArrayList<FileChooserItem>();
 		mAdapter = new FileChooserAdapter(this, R.layout.file_chooser_item,
 				mCurFileList);
@@ -249,16 +259,6 @@ public class VolumeBrowserActivity extends ListActivity {
 			showDialog(DIALOG_ERROR);
 			finish();
 		}
-
-		// Restore UI elements
-		super.onCreate(savedInstanceState);
-
-		setContentView(R.layout.file_chooser);
-
-		mListHeader = new TextView(this);
-		mListHeader.setTypeface(null, Typeface.BOLD);
-		mListHeader.setTextSize(16);
-		this.getListView().addHeaderView(mListHeader);
 
 		mPasteMode = PASTE_OP_NONE;
 
