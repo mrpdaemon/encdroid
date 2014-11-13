@@ -18,6 +18,7 @@
 
 package org.mrpdaemon.android.encdroid;
 
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,19 +67,20 @@ public class DBHelper extends SQLiteOpenHelper {
 	public void onCreate(SQLiteDatabase db) {
 		String sqlCmd = "CREATE TABLE " + DB_TABLE + " (" + DB_COL_ID
 				+ " int primary key, " + DB_COL_NAME + " text, " + DB_COL_PATH
-				+ " text, " + DB_COL_KEY + " text, " + DB_COL_TYPE + " int, " + DB_COL_CONFIGPATH + " text)";
+				+ " text, " + DB_COL_KEY + " text, " + DB_COL_TYPE + " int, "
+				+ DB_COL_CONFIGPATH + " text)";
 		Log.d(TAG, "onCreate() executing SQL: " + sqlCmd);
 		db.execSQL(sqlCmd);
 	}
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		//Adding column DB_COL_CONFIGPATH on upgrade
+		// Adding column DB_COL_CONFIGPATH on upgrade
 		if (oldVersion == 3) {
 			Log.d(TAG, "onUpgrade() Upgrading DB");
-			db.execSQL("ALTER TABLE " + DB_TABLE + " ADD COLUMN " + DB_COL_CONFIGPATH + " TEXT");
-		}
-		else{
+			db.execSQL("ALTER TABLE " + DB_TABLE + " ADD COLUMN "
+					+ DB_COL_CONFIGPATH + " TEXT");
+		} else {
 			db.execSQL("DROP TABLE IF EXISTS " + DB_TABLE);
 			Log.d(TAG, "onUpgrade() recreating DB");
 			onCreate(db);
@@ -93,7 +95,13 @@ public class DBHelper extends SQLiteOpenHelper {
 		values.put(DB_COL_NAME, volume.getName());
 		values.put(DB_COL_PATH, volume.getPath());
 		values.put(DB_COL_CONFIGPATH, volume.getCustomConfigPath());
-		values.put(DB_COL_TYPE, mApp.getFSIndex(volume.getFileSystem()));
+
+		int fsIndex = mApp.getFSIndex(volume.getFileSystem());
+		if (fsIndex < 0) {
+			throw new InvalidParameterException("Invalid filesystem index: "
+					+ fsIndex);
+		}
+		values.put(DB_COL_TYPE, fsIndex);
 
 		Log.d(TAG, "insertVolume() name: '" + volume.getName() + "' path: '"
 				+ volume.getPath() + "'");
@@ -191,17 +199,33 @@ public class DBHelper extends SQLiteOpenHelper {
 
 				Log.d(TAG, "getVolume() name: '" + volName + "' path: '"
 						+ volPath + "'");
-				Volume volume;
-				if(volConfigPath == null) {
-					volume = new Volume(volName, volPath, mApp
-							.getFileSystemList().get(volFsIdx));
-				}
-				else {
-					volume = new Volume(volName, volPath, volConfigPath,
-							mApp.getFileSystemList().get(volFsIdx));
-				}
 
-				volumes.add(volume);
+				if (volFsIdx >= 0) {
+					Volume volume;
+					if (volConfigPath == null) {
+						volume = new Volume(volName, volPath, mApp
+								.getFileSystemList().get(volFsIdx));
+					} else {
+						volume = new Volume(volName, volPath, volConfigPath,
+								mApp.getFileSystemList().get(volFsIdx));
+					}
+
+					volumes.add(volume);
+				} else {
+					/*
+					 * Volume affected by a bug which ended up inserting volumes
+					 * with type == -1 into the DB. Let's drop this volume from
+					 * the DB.
+					 */
+					int keyColId = cursor.getColumnIndex(DB_COL_ID);
+					int rowKey = cursor.getInt(keyColId);
+
+					Log.i(TAG, "Invalid volume type: " + volFsIdx
+							+ " deleting volume '" + volName
+							+ "' from database");
+
+					db.delete(DB_TABLE, DB_COL_ID + "=" + rowKey, null);
+				}
 			} while (cursor.moveToNext());
 		}
 

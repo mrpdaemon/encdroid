@@ -135,7 +135,7 @@ public class EDApplication extends Application {
 		int index = 0;
 
 		for (FileSystem fs : mFileSystemList) {
-			if (fs == fileSystem) {
+			if (fs.getName().equals(fileSystem.getName())) {
 				return index;
 			}
 			index++;
