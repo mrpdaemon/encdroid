@@ -18,67 +18,38 @@
 
 package org.mrpdaemon.android.encdroid;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.ListActivity;
+import android.app.DialogFragment;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
+import android.app.ListFragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MenuItem;
 
-public class AccountsActivity extends ListActivity {
+public class AccountsActivity extends Activity {
 
-	// Error dialog
-	private final static int DIALOG_ERROR = 0;
-
-	// Logger tag
-	private final static String TAG = "AccountsActivity";
-
-	// Application object
-	private EDApplication mApp;
-
-	// List adapter
-	private AccountListAdapter mAdapter;
-
-	// Text for the error dialog
-	private String mErrDialogText = "";
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onCreate(android.os.Bundle)
-	 */
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		mApp = (EDApplication) getApplication();
-
-		setContentView(R.layout.account_list);
-		setTitle(getString(R.string.accounts));
+		// Display the preference fragment
+		FragmentManager mFragmentManager = getFragmentManager();
+		FragmentTransaction mFragmentTransaction = mFragmentManager
+				.beginTransaction();
+		EDAccountsFragment mAccountsFragment = new EDAccountsFragment();
+		mFragmentTransaction.replace(android.R.id.content, mAccountsFragment);
+		mFragmentTransaction.commit();
 
 		getActionBar().setDisplayHomeAsUpEnabled(true);
 
-		refreshList();
+		setTitle(getString(R.string.settings));
 	}
 
-	private void refreshList() {
-		if (mAdapter == null) {
-			mAdapter = new AccountListAdapter(this, R.layout.account_list_item,
-					mApp.getAccountList());
-			this.setListAdapter(mAdapter);
-		} else {
-			mAdapter.notifyDataSetChanged();
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
-	 */
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
@@ -94,11 +65,6 @@ public class AccountsActivity extends ListActivity {
 		return true;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onKeyDown(int, android.view.KeyEvent)
-	 */
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
@@ -112,93 +78,112 @@ public class AccountsActivity extends ListActivity {
 		return super.onKeyDown(keyCode, event);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onCreateDialog(int)
-	 */
-	@Override
-	protected Dialog onCreateDialog(int id) {
+	public class EDAccountsFragment extends ListFragment {
 
-		AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this);
-		AlertDialog alertDialog = null;
+		// Application object
+		private EDApplication mApp;
 
-		switch (id) {
-		case DIALOG_ERROR:
-			alertBuilder.setMessage(mErrDialogText);
-			alertBuilder.setCancelable(false);
-			alertBuilder.setNeutralButton(getString(R.string.btn_ok_str),
-					new DialogInterface.OnClickListener() {
-						public void onClick(DialogInterface dialog,
-								int whichButton) {
-							dialog.dismiss();
-						}
-					});
-			alertDialog = alertBuilder.create();
-			break;
+		// List adapter
+		private AccountListAdapter mAdapter;
 
-		default:
-			Log.d(TAG, "Unknown dialog ID requested " + id);
-			return null;
+		@Override
+		public void onCreate(Bundle savedInstanceState) {
+			super.onCreate(savedInstanceState);
+
+			setRetainInstance(true);
+
+			mApp = (EDApplication) getApplication();
+
+			setContentView(R.layout.account_list);
+			setTitle(getString(R.string.accounts));
+
+			getActionBar().setDisplayHomeAsUpEnabled(true);
+
+			refreshList();
 		}
 
-		return alertDialog;
-	}
+		private void refreshList() {
+			if (mAdapter == null) {
+				mAdapter = new AccountListAdapter(this.getActivity(),
+						R.layout.account_list_item, mApp.getAccountList());
+				this.setListAdapter(mAdapter);
+			} else {
+				mAdapter.notifyDataSetChanged();
+			}
+		}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onResume()
-	 */
-	@Override
-	protected void onStart() {
-		super.onStart();
-		refreshList();
-	}
+		public class AccountsErrorDialogFragment extends DialogFragment {
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onActivityResult(int, int,
-	 * android.content.Intent)
-	 */
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		super.onActivityResult(requestCode, resultCode, data);
+			private String mErrorText;
 
-		for (Account account : mApp.getAccountList()) {
-			if (account.isLinkOrAuthInProgress()) {
-				if (account.forwardActivityResult(AccountsActivity.this,
-						requestCode, resultCode, data) == true) {
-					refreshList();
-				} else {
-					mErrDialogText = String.format(
-							getString(R.string.account_login_error),
-							account.getName());
-					showDialog(DIALOG_ERROR);
+			public AccountsErrorDialogFragment(String errorText) {
+				super();
+				mErrorText = errorText;
+			}
+
+			@Override
+			public Dialog onCreateDialog(Bundle savedInstanceState) {
+
+				AlertDialog.Builder alertBuilder = new AlertDialog.Builder(
+						getActivity());
+
+				alertBuilder.setMessage(mErrorText);
+				alertBuilder.setCancelable(false);
+				alertBuilder.setNeutralButton(getString(R.string.btn_ok_str),
+						new DialogInterface.OnClickListener() {
+							public void onClick(DialogInterface dialog,
+									int whichButton) {
+								dialog.dismiss();
+							}
+						});
+				return alertBuilder.create();
+
+			}
+		}
+
+		@Override
+		public void onStart() {
+			super.onStart();
+			refreshList();
+		}
+
+		private void showErrorDialog(String errorText) {
+			new AccountsErrorDialogFragment(errorText).show(
+					getFragmentManager(), "errorDialog");
+		}
+
+		@Override
+		public void onActivityResult(int requestCode, int resultCode,
+				Intent data) {
+			super.onActivityResult(requestCode, resultCode, data);
+
+			for (Account account : mApp.getAccountList()) {
+				if (account.isLinkOrAuthInProgress()) {
+					if (account.forwardActivityResult(AccountsActivity.this,
+							requestCode, resultCode, data) == true) {
+						refreshList();
+					} else {
+						showErrorDialog(String.format(
+								getString(R.string.account_login_error),
+								account.getName()));
+					}
 				}
 			}
 		}
-	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onResume()
-	 */
-	@Override
-	protected void onResume() {
-		super.onResume();
+		@Override
+		public void onResume() {
+			super.onResume();
 
-		for (Account account : mApp.getAccountList()) {
-			if (account.isLinkOrAuthInProgress()) {
-				if (account.resumeLinkOrAuth() == true) {
-					refreshList();
-				} else {
-					mErrDialogText = String.format(
-							getString(R.string.account_login_error),
-							account.getName());
-					showDialog(DIALOG_ERROR);
+			for (Account account : mApp.getAccountList()) {
+				if (account.isLinkOrAuthInProgress()) {
+					if (account.resumeLinkOrAuth() == true) {
+						refreshList();
+					} else {
+						showErrorDialog(String.format(
+								getString(R.string.account_login_error),
+								account.getName()));
+					}
 				}
 			}
 		}
