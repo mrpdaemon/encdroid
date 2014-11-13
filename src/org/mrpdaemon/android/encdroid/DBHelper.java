@@ -18,6 +18,7 @@
 
 package org.mrpdaemon.android.encdroid;
 
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,6 +67,7 @@ public class DBHelper extends SQLiteOpenHelper {
 		String sqlCmd = "CREATE TABLE " + DB_TABLE + " (" + DB_COL_ID
 				+ " int primary key, " + DB_COL_NAME + " text, " + DB_COL_PATH
 				+ " text, " + DB_COL_KEY + " text, " + DB_COL_TYPE + " int)";
+
 		Log.d(TAG, "onCreate() executing SQL: " + sqlCmd);
 		db.execSQL(sqlCmd);
 	}
@@ -84,7 +86,13 @@ public class DBHelper extends SQLiteOpenHelper {
 		values.clear();
 		values.put(DB_COL_NAME, volume.getName());
 		values.put(DB_COL_PATH, volume.getPath());
-		values.put(DB_COL_TYPE, mApp.getFSIndex(volume.getFileSystem()));
+
+		int fsIndex = mApp.getFSIndex(volume.getFileSystem());
+		if (fsIndex < 0) {
+			throw new InvalidParameterException("Invalid filesystem index: "
+					+ fsIndex);
+		}
+		values.put(DB_COL_TYPE, fsIndex);
 
 		Log.d(TAG, "insertVolume() name: '" + volume.getName() + "' path: '"
 				+ volume.getPath() + "'");
@@ -181,10 +189,25 @@ public class DBHelper extends SQLiteOpenHelper {
 				Log.d(TAG, "getVolume() name: '" + volName + "' path: '"
 						+ volPath + "'");
 
-				Volume volume = new Volume(volName, volPath, mApp
-						.getFileSystemList().get(volFsIdx));
+				if (volFsIdx >= 0) {
+					Volume volume = new Volume(volName, volPath, mApp
+							.getFileSystemList().get(volFsIdx));
+					volumes.add(volume);
+				} else {
+					/*
+					 * Volume affected by a bug which ended up inserting volumes
+					 * with type == -1 into the DB. Let's drop this volume from
+					 * the DB.
+					 */
+					int keyColId = cursor.getColumnIndex(DB_COL_ID);
+					int rowKey = cursor.getInt(keyColId);
 
-				volumes.add(volume);
+					Log.i(TAG, "Invalid volume type: " + volFsIdx
+							+ " deleting volume '" + volName
+							+ "' from database");
+
+					db.delete(DB_TABLE, DB_COL_ID + "=" + rowKey, null);
+				}
 			} while (cursor.moveToNext());
 		}
 
