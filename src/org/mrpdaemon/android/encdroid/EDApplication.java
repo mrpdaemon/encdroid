@@ -134,6 +134,10 @@ public class EDApplication extends Application {
 	public int getFSIndex(FileSystem fileSystem) {
 		int index = 0;
 
+		if (fileSystem == null) {
+			return -1;
+		}
+
 		for (FileSystem fs : mFileSystemList) {
 			if (fs.getName().equals(fileSystem.getName())) {
 				return index;
