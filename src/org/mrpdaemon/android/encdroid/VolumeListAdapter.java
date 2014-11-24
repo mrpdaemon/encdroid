@@ -113,6 +113,10 @@ public class VolumeListAdapter extends ArrayAdapter<Volume> {
 	public boolean isEnabled(int position) {
 		final Volume item = items.get(position);
 
+		if ((item == null) || (item.getFileSystem() == null)) {
+			return false;
+		}
+
 		return item.getFileSystem().isEnabled();
 	}
 
