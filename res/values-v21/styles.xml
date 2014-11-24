@@ -4,6 +4,10 @@
     <style name="LightThemeSelector" parent="android:Theme.Material.Light.DarkActionBar">
         <item name="menuIconPaste">@drawable/ic_menu_paste</item>
         <item name="menuIconPrefs">@drawable/ic_menu_preferences</item>
+        <item name="android:colorPrimary">@color/primarygreen</item>
+        <item name="android:colorPrimaryDark">@color/primarydarkgreen</item>
+        <item name="android:colorAccent">@color/selectedgreen</item>
+        <item name="android:actionModeBackground">@color/selectedgreen</item>
     </style>
 
 </resources>

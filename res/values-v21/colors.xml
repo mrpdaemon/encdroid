@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="primarygreen">#204b44</color>
+    <color name="primarydarkgreen">#12312e</color>
+    <color name="selectedgreen">#5cb69d</color>
+
+</resources>
