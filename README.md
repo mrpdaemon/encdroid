@@ -24,7 +24,7 @@ build see the instructions below on "Dropbox API keys" and
 
 ### Target API Level
 
-The recommended API level to build Encdroid against is currently: 18
+The recommended API level to build Encdroid against is currently: 21
 
 ### Dropbox API Keys
 
