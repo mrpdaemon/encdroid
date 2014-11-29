@@ -156,11 +156,11 @@ public class DropboxFileProvider implements EncFSFileProvider {
 
 	private EncFSFileInfo entryToFileInfo(Entry entry) {
 		String relativePath;
-		if (rootPath.equals("/")) {
-			relativePath = entry.parentPath();
-		} else if (entry.path.equals(rootPath)) {
+		if (entry.path.equals(rootPath)) {
 			// we're dealing with the root dir
 			relativePath = "/";
+		} else if (rootPath.equals("/")) {
+			relativePath = entry.parentPath();
 		} else if (entry.parentPath().equals(rootPath)) {
 			// File is child of the root path
 			relativePath = "/";
@@ -168,9 +168,11 @@ public class DropboxFileProvider implements EncFSFileProvider {
 			relativePath = entry.parentPath().substring(rootPath.length());
 		}
 
+		long modified = (entry.modified != null) ? RESTUtility.parseDate(
+				entry.modified).getTime() : 0;
+
 		return new EncFSFileInfo(entry.fileName(), relativePath, entry.isDir,
-				RESTUtility.parseDate(entry.modified).getTime(), entry.bytes,
-				true, true, true);
+				modified, entry.bytes, true, true, true);
 	}
 
 	@Override
