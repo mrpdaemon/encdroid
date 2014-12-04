@@ -517,17 +517,6 @@ public class VolumeBrowserActivity extends ListActivity {
 		case R.id.volume_browser_menu_refresh:
 			launchFillTask();
 			return true;
-		case android.R.id.home:
-			if (mCurEncFSDir == mEncfsVolume.getRootDir()) {
-				// Go back to volume list
-				Intent intent = new Intent(this, VolumeListActivity.class);
-				intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-				startActivity(intent);
-			} else {
-				mCurEncFSDir = mDirStack.pop();
-				launchFillTask();
-			}
-			return true;
 		default:
 			return false;
 		}

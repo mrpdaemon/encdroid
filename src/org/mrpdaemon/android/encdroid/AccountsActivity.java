@@ -26,7 +26,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.MenuItem;
 
 public class AccountsActivity extends ListActivity {
 
@@ -70,26 +69,6 @@ public class AccountsActivity extends ListActivity {
 		} else {
 			mAdapter.notifyDataSetChanged();
 		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
-	 */
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		switch (item.getItemId()) {
-		case android.R.id.home:
-			// Go back to volume list
-			Intent intent = new Intent(this, VolumeListActivity.class);
-			intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-			startActivity(intent);
-			break;
-		default:
-			break;
-		}
-		return true;
 	}
 
 	/*

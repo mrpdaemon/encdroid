@@ -284,22 +284,6 @@ public class FileChooserActivity extends ListActivity {
 		case R.id.file_chooser_menu_refresh:
 			launchFillTask();
 			return true;
-		case android.R.id.home:
-			Log.v(TAG, "Home icon clicked");
-			if (!mCurrentDir.equalsIgnoreCase(mFileProvider
-					.getFilesystemRootPath())) {
-
-				if (mCurrentDir.lastIndexOf("/") == 0) {
-					mCurrentDir = mFileProvider.getFilesystemRootPath();
-				} else {
-					mCurrentDir = mCurrentDir.substring(0,
-							mCurrentDir.lastIndexOf("/"));
-				}
-
-				launchFillTask();
-			} else {
-				finish();
-			}
 		default:
 			return false;
 		}

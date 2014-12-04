@@ -3,13 +3,11 @@
     <item
         android:id="@+id/file_chooser_menu_export"
         android:icon="@drawable/ic_menu_import_file"
-        android:showAsAction="always|withText"
         android:title="@string/menu_export"
         android:visible="false"/>
     <item
         android:id="@+id/file_chooser_menu_refresh"
         android:icon="@drawable/ic_menu_refresh"
-        android:showAsAction="ifRoom|withText"
         android:title="@string/menu_refresh"/>
 
 </menu>

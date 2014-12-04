@@ -27,7 +27,6 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.MenuItem;
 
 public class EDPreferenceActivity extends PreferenceActivity implements
 		OnSharedPreferenceChangeListener {
@@ -51,26 +50,6 @@ public class EDPreferenceActivity extends PreferenceActivity implements
 		SharedPreferences prefs = PreferenceManager
 				.getDefaultSharedPreferences(this);
 		adjustExtSdScreen(prefs);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
-	 */
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		switch (item.getItemId()) {
-		case android.R.id.home:
-			// Go back to volume list
-			Intent intent = new Intent(this, VolumeListActivity.class);
-			intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-			startActivity(intent);
-			break;
-		default:
-			break;
-		}
-		return true;
 	}
 
 	/*
