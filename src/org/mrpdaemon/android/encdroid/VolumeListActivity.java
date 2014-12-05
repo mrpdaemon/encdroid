@@ -33,6 +33,8 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -40,7 +42,6 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnShowListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
@@ -69,7 +70,8 @@ import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 import android.widget.Toast;
 
-public class VolumeListActivity extends ListActivity {
+public class VolumeListActivity extends ListActivity implements
+		TaskResultListener {
 
 	// Request into FileChooserActivity to run in different modes
 	private final static int VOLUME_PICKER_REQUEST = 0;
@@ -90,11 +92,10 @@ public class VolumeListActivity extends ListActivity {
 	private final static int VOLUME_OP_CREATE = 1;
 
 	// Async task types
-	private final static int ASYNC_TASK_UNLOCK_CACHE = 0;
-	private final static int ASYNC_TASK_UNLOCK_PBKDF2 = 1;
-	private final static int ASYNC_TASK_CREATE = 2;
-	private final static int ASYNC_TASK_DELETE = 3;
-	private final static int ASYNC_TASK_LAUNCH_CHOOSER = 4;
+	private final static int ASYNC_TASK_UNLOCK = 0;
+	private final static int ASYNC_TASK_CREATE = 1;
+	private final static int ASYNC_TASK_DELETE = 2;
+	private final static int ASYNC_TASK_LAUNCH_CHOOSER = 3;
 
 	// Saved instance state keys
 	private final static String SAVED_VOL_IDX_KEY = "vol_idx";
@@ -103,11 +104,12 @@ public class VolumeListActivity extends ListActivity {
 	private final static String SAVED_CREATE_VOL_NAME_KEY = "create_vol_name";
 	private final static String SAVED_VOL_OP_KEY = "vol_op";
 	private final static String SAVED_VOL_FS_IDX_KEY = "vol_fs_idx";
-	private final static String SAVED_ASYNC_TASK_ID_KEY = "async_task_id";
-	private final static String SAVED_PROGRESS_BAR_STR_ARG_KEY = "prog_bar_str";
 
 	// Logger tag
 	private final static String TAG = "VolumeListActivity";
+
+	// Task fragment tag
+	private final static String TASK_FRAGMENT_TAG = "TaskFragment";
 
 	// Suffix for newly created volume directories
 	private final static String NEW_VOLUME_DIR_SUFFIX = ".encdroid";
@@ -121,15 +123,6 @@ public class VolumeListActivity extends ListActivity {
 	// Currently selected VolumeList item
 	private Volume mSelectedVolume;
 	private int mSelectedVolIdx;
-
-	// Async task object for running volume key derivation
-	private EDAsyncTask<String, ?, ?> mAsyncTask = null;
-
-	// Async task ID
-	private int mAsyncTaskId = -1;
-
-	// Progress dialog for async progress
-	private ProgressDialog mProgDialog = null;
 
 	// Result from the volume picker activity
 	private String mVolPickerResult = null;
@@ -151,15 +144,6 @@ public class VolumeListActivity extends ListActivity {
 
 	// Shared preferences
 	private SharedPreferences mPrefs = null;
-
-	// Saved instance state for progress bar string argument
-	private String mSavedProgBarStrArg = null;
-
-	// Restore context
-	private class ActivityRestoreContext {
-		public Volume savedVolume;
-		public EDAsyncTask<String, ?, ?> savedTask;
-	}
 
 	// Called when the activity is first created.
 	@Override
@@ -190,47 +174,15 @@ public class VolumeListActivity extends ListActivity {
 				mVolumeFileSystem = mApp.getFileSystemList().get(volFsIndex);
 			}
 
-			ActivityRestoreContext restoreContext = (ActivityRestoreContext) getLastNonConfigurationInstance();
-			if (restoreContext != null) {
-				mSelectedVolume = restoreContext.savedVolume;
-				mSelectedVolIdx = savedInstanceState.getInt(SAVED_VOL_IDX_KEY);
-
-				// Restore async task
-				mAsyncTask = restoreContext.savedTask;
-				mAsyncTaskId = savedInstanceState
-						.getInt(SAVED_ASYNC_TASK_ID_KEY);
-
-				if (mAsyncTask != null) {
-					// Create new progress dialog and replace the old one
-					createProgressBarForTask(mAsyncTaskId,
-							savedInstanceState
-									.getString(SAVED_PROGRESS_BAR_STR_ARG_KEY));
-					mAsyncTask.setProgressDialog(mProgDialog);
-
-					// Fix the activity for the task
-					mAsyncTask.setActivity(this);
-				}
-			}
+			mSelectedVolIdx = savedInstanceState.getInt(SAVED_VOL_IDX_KEY);
 		}
+
 		refreshList();
-	}
 
-	@Override
-	public Object onRetainNonConfigurationInstance() {
-		ActivityRestoreContext restoreContext = new ActivityRestoreContext();
-		restoreContext.savedVolume = mSelectedVolume;
-		if (mAsyncTask != null
-				&& mAsyncTask.getStatus() == AsyncTask.Status.RUNNING) {
-			// Clear progress bar so we don't leak it
-			mProgDialog.dismiss();
-			mAsyncTask.setProgressDialog(null);
-			// Clear the activity so we don't leak it
-			mAsyncTask.setActivity(null);
-			restoreContext.savedTask = mAsyncTask;
-		} else {
-			restoreContext.savedTask = null;
+		if (savedInstanceState != null) {
+			// restore mSelectedVolume
+			mSelectedVolume = mAdapter.getItem(mSelectedVolIdx);
 		}
-		return restoreContext;
 	}
 
 	@Override
@@ -242,8 +194,6 @@ public class VolumeListActivity extends ListActivity {
 		outState.putInt(SAVED_VOL_OP_KEY, mVolumeOp);
 		outState.putInt(SAVED_VOL_FS_IDX_KEY,
 				mApp.getFSIndex(mVolumeFileSystem));
-		outState.putInt(SAVED_ASYNC_TASK_ID_KEY, mAsyncTaskId);
-		outState.putString(SAVED_PROGRESS_BAR_STR_ARG_KEY, mSavedProgBarStrArg);
 		super.onSaveInstanceState(outState);
 	}
 
@@ -495,37 +445,24 @@ public class VolumeListActivity extends ListActivity {
 
 							switch (myId) {
 							case DIALOG_VOL_PASS:
-								// Show progress dialog
-								createProgressBarForTask(
-										ASYNC_TASK_UNLOCK_PBKDF2, null);
-
-								// Launch async task to import volume
-								mAsyncTask = new UnlockVolumeTask(mProgDialog,
-										mVolumeFileSystem, null);
-								mAsyncTaskId = ASYNC_TASK_UNLOCK_PBKDF2;
-								mAsyncTask.setActivity(VolumeListActivity.this);
-								if(mSelectedVolume.getCustomConfigPath() == null) {
-									mAsyncTask.execute(mSelectedVolume.getPath(),
-											value.toString());
-								}
-								else {
-									mAsyncTask.execute(mSelectedVolume.getPath(),
-											value.toString(),
-											mSelectedVolume.getCustomConfigPath());
-								}
+								// Launch unlock task
+								TaskFragment unlockTask = new UnlockVolumeTaskFragment(
+										VolumeListActivity.this,
+										mVolumeFileSystem, null,
+										mSelectedVolume.getPath(), value
+												.toString(), mSelectedVolume
+												.getCustomConfigPath());
+								addTaskFragment(unlockTask);
+								unlockTask.startTask();
 								break;
 							case DIALOG_VOL_CREATEPASS:
-								// Show progress dialog
-								createProgressBarForTask(ASYNC_TASK_CREATE,
-										mCreateVolumeName);
-
 								// Launch async task to create volume
-								mAsyncTask = new CreateVolumeTask(mProgDialog,
-										mVolumeFileSystem);
-								mAsyncTaskId = ASYNC_TASK_CREATE;
-								mAsyncTask.setActivity(VolumeListActivity.this);
-								mAsyncTask.execute(mVolPickerResult,
-										mCreateVolumeName, value.toString());
+								TaskFragment createTask = new CreateVolumeTaskFragment(
+										VolumeListActivity.this,
+										mVolPickerResult, mCreateVolumeName,
+										value.toString(), mVolumeFileSystem);
+								addTaskFragment(createTask);
+								createTask.startTask();
 								break;
 							}
 						}
@@ -571,13 +508,13 @@ public class VolumeListActivity extends ListActivity {
 							Editable value = input.getText();
 							switch (myId) {
 							case DIALOG_VOL_NAME:
-								if(mVolConfigResult == null) {
+								if (mVolConfigResult == null) {
 									importVolume(value.toString(),
 											mVolPickerResult, mVolumeFileSystem);
-								}
-								else {
+								} else {
 									importVolumeWithConfig(value.toString(),
-											mVolPickerResult, mVolConfigResult, mVolumeFileSystem);
+											mVolPickerResult, mVolConfigResult,
+											mVolumeFileSystem);
 								}
 								break;
 							case DIALOG_VOL_RENAME:
@@ -617,16 +554,14 @@ public class VolumeListActivity extends ListActivity {
 					R.layout.fs_list_item, mApp.getFileSystemList()),
 					new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int item) {
-							createProgressBarForTask(ASYNC_TASK_LAUNCH_CHOOSER,
-									null);
-
-							// Launch async task for launching file chooser -
-							// needed for network auth
-							mAsyncTask = new LaunchChooserTask(mProgDialog,
-									item);
-							mAsyncTaskId = ASYNC_TASK_LAUNCH_CHOOSER;
-							mAsyncTask.setActivity(VolumeListActivity.this);
-							mAsyncTask.execute();
+							/*
+							 * Launch async task for launching file chooser
+							 * needed for network auth
+							 */
+							TaskFragment launchTask = new LaunchChooserTaskFragment(
+									VolumeListActivity.this, mApp, item);
+							addTaskFragment(launchTask);
+							launchTask.startTask();
 						}
 					});
 			alertDialog = alertBuilder.create();
@@ -662,16 +597,12 @@ public class VolumeListActivity extends ListActivity {
 								int whichButton) {
 
 							if (confirmCheck.isChecked()) {
-								// Delete volume from disk
-								createProgressBarForTask(ASYNC_TASK_DELETE,
-										mSelectedVolume.getName());
-
 								// Launch async task to delete volume
-								mAsyncTask = new DeleteVolumeTask(mProgDialog,
+								TaskFragment deleteTask = new DeleteVolumeTaskFragment(
+										VolumeListActivity.this,
 										mSelectedVolume);
-								mAsyncTaskId = ASYNC_TASK_DELETE;
-								mAsyncTask.setActivity(VolumeListActivity.this);
-								mAsyncTask.execute();
+								addTaskFragment(deleteTask);
+								deleteTask.startTask();
 							} else {
 								// Just remove from the volume list
 								deleteVolume(mSelectedVolume);
@@ -740,7 +671,7 @@ public class VolumeListActivity extends ListActivity {
 
 			mVolPickerResult = data.getExtras().getString(
 					FileChooserActivity.RESULT_KEY);
-			mVolConfigResult= data.getExtras().getString(
+			mVolConfigResult = data.getExtras().getString(
 					FileChooserActivity.CONFIG_RESULT_KEY);
 
 			switch (requestCode) {
@@ -800,6 +731,25 @@ public class VolumeListActivity extends ListActivity {
 		startActivityForResult(startFileChooser, request);
 	}
 
+	// Add a task fragment to the Activity state
+	private void addTaskFragment(TaskFragment fragment) {
+		FragmentManager fragmentManager = getFragmentManager();
+		FragmentTransaction fragmentTransaction = fragmentManager
+				.beginTransaction();
+		fragmentTransaction.add(fragment, TASK_FRAGMENT_TAG);
+		fragmentTransaction.commit();
+	}
+
+	// Remove the task fragment from the Activity state
+	private void removeTaskFragment() {
+		FragmentManager fragmentManager = getFragmentManager();
+		TaskFragment taskFragment = (TaskFragment) fragmentManager
+				.findFragmentByTag(TASK_FRAGMENT_TAG);
+		if (taskFragment != null) {
+			fragmentManager.beginTransaction().remove(taskFragment).commit();
+		}
+	}
+
 	// Launch the volume browser activity for the given volume
 	private void launchVolumeBrowser(int volIndex) {
 		Intent startVolumeBrowser = new Intent(this,
@@ -832,7 +782,8 @@ public class VolumeListActivity extends ListActivity {
 
 	private void importVolumeWithConfig(String volumeName, String volumePath,
 			String configPath, FileSystem fileSystem) {
-		Volume volume = new Volume(volumeName, volumePath, configPath, fileSystem);
+		Volume volume = new Volume(volumeName, volumePath, configPath,
+				fileSystem);
 		mApp.getVolumeList().add(volume);
 		mApp.getDbHelper().insertVolume(volume);
 		refreshList();
@@ -865,443 +816,586 @@ public class VolumeListActivity extends ListActivity {
 		if (cachedKey == null) {
 			showDialog(DIALOG_VOL_PASS);
 		} else {
-			createProgressBarForTask(ASYNC_TASK_UNLOCK_CACHE, null);
-
-			mAsyncTask = new UnlockVolumeTask(null, mVolumeFileSystem,
-					cachedKey);
-			mAsyncTaskId = ASYNC_TASK_UNLOCK_CACHE;
-			mAsyncTask.setActivity(VolumeListActivity.this);
-			if(mSelectedVolume.getCustomConfigPath() == null) {
-				mAsyncTask.execute(mSelectedVolume.getPath(), null);
-			}
-			else {
-				mAsyncTask.execute(mSelectedVolume.getPath(), null,
-						mSelectedVolume.getCustomConfigPath());
-			}
+			TaskFragment unlockTask = new UnlockVolumeTaskFragment(this,
+					mVolumeFileSystem, cachedKey, mSelectedVolume.getPath(),
+					null, mSelectedVolume.getCustomConfigPath());
+			addTaskFragment(unlockTask);
+			unlockTask.startTask();
 		}
 	}
 
-	private void createProgressBarForTask(int taskId, String strArg) {
-		mProgDialog = new ProgressDialog(VolumeListActivity.this);
-		switch (taskId) {
-		case ASYNC_TASK_CREATE:
-			mProgDialog.setTitle(String.format(
-					getString(R.string.mkvol_dialog_title_str), strArg));
-			break;
-		case ASYNC_TASK_DELETE:
-			mProgDialog.setTitle(String.format(
-					getString(R.string.delvol_dialog_title_str), strArg));
-			break;
-		case ASYNC_TASK_UNLOCK_CACHE:
-			mProgDialog.setTitle(getString(R.string.unlocking_volume));
-			break;
-		case ASYNC_TASK_UNLOCK_PBKDF2:
-			mProgDialog.setTitle(getString(R.string.pbkdf_dialog_title_str));
-			mProgDialog.setMessage(getString(R.string.pbkdf_dialog_msg_str));
-			break;
-		case ASYNC_TASK_LAUNCH_CHOOSER:
-			mProgDialog.setTitle(getString(R.string.launching_chooser));
-			break;
-		default:
-			Log.e(TAG, "Unknown task ID: " + taskId);
-			break;
-		}
+	// Class to hold result from UnlockVolumeTask
+	private class UnlockVolumeTaskResult {
+		public EncFSVolume volume;
+		public boolean invalidCachedKey;
+		public byte[] cachedKey;
 
-		mProgDialog.setCancelable(false);
-		mProgDialog.show();
-		mSavedProgBarStrArg = strArg;
+		public UnlockVolumeTaskResult(EncFSVolume volume,
+				boolean invalidCachedKey, byte[] cachedKey) {
+			this.volume = volume;
+			this.invalidCachedKey = invalidCachedKey;
+			this.cachedKey = cachedKey;
+		}
 	}
 
-	private class UnlockVolumeTask extends
-			EDAsyncTask<String, Void, EncFSVolume> {
+	private class UnlockVolumeTaskFragment extends TaskFragment {
 
-		// File system for volume
+		// Volume type
 		private FileSystem mFileSystem;
 
 		// Cached key
-		private byte[] cachedKey;
+		private byte[] mCachedKey;
 
-		// Invalid cached key
-		boolean invalidCachedKey = false;
+		// Path of the volume to unlock
+		private String mVolumePath;
 
-		public UnlockVolumeTask(ProgressDialog dialog, FileSystem fileSystem,
-				byte[] cachedKey) {
-			super();
-			setProgressDialog(dialog);
+		// Password for unlocking (optional if cached key is given)
+		private String mPassword;
+
+		// Optional custom config path
+		private String mConfigPath;
+
+		public UnlockVolumeTaskFragment(Activity activity,
+				FileSystem fileSystem, byte[] cachedKey, String volumePath,
+				String password, String configPath) {
+			super(activity);
 			this.mFileSystem = fileSystem;
-			this.cachedKey = cachedKey;
+			this.mCachedKey = cachedKey;
+			this.mVolumePath = volumePath;
+			this.mPassword = password;
+			this.mConfigPath = configPath;
 		}
 
-		@SuppressWarnings("deprecation")
-		@SuppressLint("Wakelock")
 		@Override
-		protected EncFSVolume doInBackground(String... args) {
+		protected int getTaskId() {
+			return ASYNC_TASK_UNLOCK;
+		}
 
-			WakeLock wl = null;
-			EncFSVolume volume = null;
+		@Override
+		protected EDAsyncTask<Void, Void, UnlockVolumeTaskResult> createTask() {
+			return new UnlockVolumeTask(this);
+		}
 
-			if (cachedKey == null) {
-				PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-				wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, TAG);
+		private class UnlockVolumeTask extends
+				EDAsyncTask<Void, Void, UnlockVolumeTaskResult> {
 
-				// Acquire wake lock to prevent screen from dimming/timing out
-				wl.acquire();
+			public UnlockVolumeTask(TaskFragment fragment) {
+				super(fragment);
 			}
 
-			// link or authenticate account if needed
-			Account account = mVolumeFileSystem.getAccount();
-			if (account != null) {
-				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
-					mErrDialogText = String.format(
-							getString(R.string.account_login_error),
-							mVolumeFileSystem.getName());
+			@Override
+			protected ProgressDialog createProgressDialog(Activity activity) {
+				// We only use a progress spinner
+				mProgressDialogSpinnerOnly = true;
+
+				if (mCachedKey == null) {
+					mProgressDialogTitle = activity
+							.getString(R.string.pbkdf_dialog_title_str);
+					mProgressDialogMsgResId = R.string.pbkdf_dialog_msg_str;
+				} else {
+					mProgressDialogTitle = activity
+							.getString(R.string.unlocking_volume);
+				}
+
+				return super.createProgressDialog(activity);
+			}
+
+			@SuppressWarnings("deprecation")
+			@SuppressLint("Wakelock")
+			@Override
+			protected UnlockVolumeTaskResult doInBackground(Void... args) {
+
+				WakeLock wl = null;
+				EncFSVolume volume = null;
+
+				if (mCachedKey == null) {
+					PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+					wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, TAG);
+
+					// Acquire wake lock to prevent screen from dimming/timing
+					// out
+					wl.acquire();
+				}
+
+				// link or authenticate account if needed
+				Account account = mFileSystem.getAccount();
+				if (account != null) {
+					// XXX: this shouldn't need activity
+					mTaskFragment.blockForActivity();
+					if (account.linkOrAuthIfNeeded(mActivity, TAG) == false) {
+						mTaskFragment.returnError(String.format(mTaskFragment
+								.getStringSafe(R.string.account_login_error),
+								mFileSystem.getName()));
+						return null;
+					}
+				}
+
+				// Get file provider for this file system
+				EncFSFileProvider fileProvider = mFileSystem
+						.getFileProvider(mVolumePath);
+				EncFSConfig volConfig = null;
+				if (mConfigPath != null) {
+					File config = new File(mConfigPath);
+					try {
+						volConfig = EncFSConfigParser.parseFile(config);
+					} catch (Exception e) {
+						Logger.logException(TAG, e);
+						mTaskFragment.returnError(e.getMessage());
+						return null;
+					}
+				}
+				// Unlock the volume, takes long due to PBKDF2 calculation
+				try {
+					if (mCachedKey == null) {
+						if (volConfig != null) {
+							volume = new EncFSVolumeBuilder()
+									.withFileProvider(fileProvider)
+									.withConfig(volConfig)
+									.withPassword(mPassword).buildVolume();
+						} else {
+							volume = new EncFSVolumeBuilder()
+									.withFileProvider(fileProvider)
+									.withPbkdf2Provider(
+											mApp.getNativePBKDF2Provider())
+									.withPassword(mPassword).buildVolume();
+						}
+					} else {
+						if (volConfig != null) {
+							volume = new EncFSVolumeBuilder()
+									.withFileProvider(fileProvider)
+									.withConfig(volConfig)
+									.withDerivedKeyData(mCachedKey)
+									.buildVolume();
+						} else {
+							volume = new EncFSVolumeBuilder()
+									.withFileProvider(fileProvider)
+									.withDerivedKeyData(mCachedKey)
+									.buildVolume();
+						}
+					}
+				} catch (EncFSInvalidPasswordException e) {
+					if (mCachedKey != null) {
+						return new UnlockVolumeTaskResult(null, true,
+								mCachedKey);
+					} else {
+						mTaskFragment.returnError(mTaskFragment
+								.getStringSafe(R.string.incorrect_pwd_str));
+						return null;
+					}
+				} catch (Exception e) {
+					Logger.logException(TAG, e);
+					mTaskFragment.returnError(e.getMessage());
 					return null;
 				}
-			}
 
-			// Get file provider for this file system
-						EncFSFileProvider fileProvider = mFileSystem
-							.getFileProvider(args[0]);
-						EncFSConfig volConfig = null;
-						if(args.length>2)
-						{
-							File config = new File(args[2]);
-							try {
-								volConfig = EncFSConfigParser.parseFile(config );
-							} catch (Exception e) {
-								Logger.logException(TAG, e);
-								((VolumeListActivity) getActivity()).mErrDialogText = e
-										.getMessage();
-							}
-					}
-		// Unlock the volume, takes long due to PBKDF2 calculation
-			try {
-				if (cachedKey == null) {
-					if(volConfig != null) {
-					volume = new EncFSVolumeBuilder()
-							.withFileProvider(fileProvider)
-							.withConfig(volConfig)
-							.withPassword(args[1]).buildVolume();
-					} else {
-					volume = new EncFSVolumeBuilder()
-							.withFileProvider(fileProvider)
-							.withPbkdf2Provider(mApp.getNativePBKDF2Provider())
-							.withPassword(args[1]).buildVolume();
-					}
-					} else {
-						if(volConfig != null) {
-							volume = new EncFSVolumeBuilder()
-								.withFileProvider(fileProvider)
-								.withConfig(volConfig)
-								.withDerivedKeyData(cachedKey).buildVolume();
-							} else {
-								volume = new EncFSVolumeBuilder()
-									.withFileProvider(fileProvider)
-									.withDerivedKeyData(cachedKey).buildVolume();
-							}
-						}
-			} catch (EncFSInvalidPasswordException e) {
-				if (cachedKey != null) {
-					invalidCachedKey = true;
-				} else {
-					((VolumeListActivity) getActivity()).mErrDialogText = getString(R.string.incorrect_pwd_str);
-				}
-			} catch (Exception e) {
-				Logger.logException(TAG, e);
-				((VolumeListActivity) getActivity()).mErrDialogText = e
-						.getMessage();
-			}
-
-			if (cachedKey == null) {
-				// Release the wake lock
-				wl.release();
-			}
-
-			return volume;
-		}
-
-		// Run after the task is complete
-		@Override
-		protected void onPostExecute(EncFSVolume result) {
-			super.onPostExecute(result);
-
-			final VolumeListActivity mActivity = (VolumeListActivity) getActivity();
-
-			if (myDialog != null) {
-				if (myDialog.isShowing()) {
-					myDialog.dismiss();
-				}
-			}
-
-			if (!isCancelled()) {
-				if (invalidCachedKey == true) {
-					// Show toast for invalid password
-					Toast.makeText(getApplicationContext(),
-							getString(R.string.save_pass_invalid_str),
-							Toast.LENGTH_SHORT).show();
-
-					// Invalidate cached key from DB
-					mActivity.mApp.getDbHelper().clearKey(mSelectedVolume);
-
-					// Kick off password dialog
-					mActivity.showDialog(DIALOG_VOL_PASS);
-
-					return;
+				if (mCachedKey == null) {
+					// Release the wake lock
+					wl.release();
 				}
 
-				if (result != null) {
-					mActivity.mSelectedVolume.unlock(result);
+				return new UnlockVolumeTaskResult(volume, false, mCachedKey);
+			}
 
-					// Notify list adapter change from UI thread
-					runOnUiThread(new Runnable() {
-						@Override
-						public void run() {
-							mActivity.mAdapter.notifyDataSetChanged();
-						}
-					});
-
-					if (cachedKey == null) {
-						// Cache key in DB if preference is enabled
-						if (mActivity.mPrefs.getBoolean("cache_key", false)) {
-							byte[] keyToCache = result.getDerivedKeyData();
-							mActivity.mApp.getDbHelper().cacheKey(
-									mSelectedVolume, keyToCache);
-						}
+			// Run after the task is complete
+			@Override
+			protected void onPostExecute(UnlockVolumeTaskResult result) {
+				super.onPostExecute(result);
+				if (!isCancelled()) {
+					if (result != null) {
+						mTaskFragment.returnResult(result);
 					}
-
-					mActivity.launchVolumeBrowser(mSelectedVolIdx);
-				} else {
-					mActivity.showDialog(DIALOG_ERROR);
 				}
 			}
 		}
 	}
 
-	private class CreateVolumeTask extends EDAsyncTask<String, Void, Boolean> {
+	// Class to return create volume task result back to the activity
+	private class CreateVolumeTaskResult {
+		public String volumeName;
+		public String volumePath;
+		public FileSystem volumeFs;
+
+		public CreateVolumeTaskResult(String volumeName, String volumePath,
+				FileSystem volumeFs) {
+			this.volumeName = volumeName;
+			this.volumePath = volumePath;
+			this.volumeFs = volumeFs;
+		}
+	}
+
+	private class CreateVolumeTaskFragment extends TaskFragment {
+
+		// Root directory path of volume being created
+		private String mVolumeRootPath;
 
 		// Name of the volume being created
-		private String volumeName;
-
-		// Path of the volume
-		private String volumePath;
+		private String mVolumeName;
 
 		// Volume type
-		private FileSystem volumeFs;
+		private FileSystem mVolumeFs;
 
 		// Password
-		private String password;
+		private String mPassword;
 
-		public CreateVolumeTask(ProgressDialog dialog, FileSystem fileSystem) {
-			super();
-			this.volumeFs = fileSystem;
-			setProgressDialog(dialog);
+		public CreateVolumeTaskFragment(Activity activity,
+				String volumeRootPath, String volumeName, String password,
+				FileSystem fileSystem) {
+			super(activity);
+			this.mVolumeRootPath = volumeRootPath;
+			this.mVolumeName = volumeName;
+			this.mVolumeFs = fileSystem;
+			this.mPassword = password;
 		}
 
 		@Override
-		protected Boolean doInBackground(String... args) {
-
-			volumeName = args[1];
-			password = args[2];
-
-			// link or authenticate account if needed
-			Account account = volumeFs.getAccount();
-			if (account != null) {
-				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
-					mErrDialogText = String.format(
-							getString(R.string.account_login_error),
-							volumeFs.getName());
-					return false;
-				}
-			}
-
-			EncFSFileProvider rootProvider = volumeFs.getFileProvider("/");
-
-			try {
-				if (!rootProvider.exists(args[0])) {
-					mErrDialogText = String.format(
-							getString(R.string.error_dir_not_found), args[0]);
-					return false;
-				}
-
-				volumePath = EncFSVolume.combinePath(args[0], volumeName
-						+ NEW_VOLUME_DIR_SUFFIX);
-
-				if (rootProvider.exists(volumePath)) {
-					mErrDialogText = getString(R.string.error_file_exists);
-					return false;
-				}
-
-				// Create the new directory
-				if (!rootProvider.mkdir(volumePath)) {
-					mErrDialogText = String.format(
-							getString(R.string.error_mkdir_fail), volumePath);
-					return false;
-				}
-			} catch (IOException e) {
-				mErrDialogText = e.getMessage();
-				return false;
-			}
-
-			EncFSFileProvider fileProvider = volumeFs
-					.getFileProvider(volumePath);
-
-			// Create the volume
-			try {
-				new EncFSVolumeBuilder().withFileProvider(fileProvider)
-						.withConfig(EncFSConfigFactory.createDefault())
-						.withPbkdf2Provider(mApp.getNativePBKDF2Provider())
-						.withPassword(password).writeVolumeConfig();
-			} catch (Exception e) {
-				mErrDialogText = e.getMessage();
-				return false;
-			}
-
-			return true;
+		protected int getTaskId() {
+			return ASYNC_TASK_CREATE;
 		}
 
-		// Run after the task is complete
 		@Override
-		protected void onPostExecute(Boolean result) {
-			super.onPostExecute(result);
+		protected EDAsyncTask<Void, Void, CreateVolumeTaskResult> createTask() {
+			return new CreateVolumeTask(this);
+		}
 
-			if (myDialog.isShowing()) {
-				myDialog.dismiss();
+		private class CreateVolumeTask extends
+				EDAsyncTask<Void, Void, CreateVolumeTaskResult> {
+
+			// Path of the volume
+			private String volumePath;
+
+			public CreateVolumeTask(TaskFragment fragment) {
+				super(fragment);
 			}
 
-			if (!isCancelled()) {
-				if (result) {
-					((VolumeListActivity) getActivity()).importVolume(
-							volumeName, volumePath, volumeFs);
-				} else {
-					((VolumeListActivity) getActivity())
-							.showDialog(DIALOG_ERROR);
+			@Override
+			protected ProgressDialog createProgressDialog(Activity activity) {
+				// We only use a progress spinner
+				mProgressDialogSpinnerOnly = true;
+				mProgressDialogTitle = String.format(String.format(
+						activity.getString(R.string.mkvol_dialog_title_str),
+						mVolumeName));
+				return super.createProgressDialog(activity);
+			}
+
+			@Override
+			protected CreateVolumeTaskResult doInBackground(Void... args) {
+
+				// link or authenticate account if needed
+				Account account = mVolumeFs.getAccount();
+				if (account != null) {
+					// XXX: shouldn't depend on mActivity
+					mTaskFragment.blockForActivity();
+					if (account.linkOrAuthIfNeeded(mActivity, TAG) == false) {
+						mTaskFragment.returnError(String.format(mTaskFragment
+								.getStringSafe(R.string.account_login_error),
+								mVolumeFs.getName()));
+						return null;
+					}
+				}
+
+				EncFSFileProvider rootProvider = mVolumeFs.getFileProvider("/");
+
+				try {
+					if (!rootProvider.exists(mVolumeRootPath)) {
+						mTaskFragment.returnError(String.format(mTaskFragment
+								.getStringSafe(R.string.error_dir_not_found),
+								mVolumeRootPath));
+						return null;
+					}
+
+					volumePath = EncFSVolume.combinePath(mVolumeRootPath,
+							mVolumeName + NEW_VOLUME_DIR_SUFFIX);
+
+					if (rootProvider.exists(volumePath)) {
+						mTaskFragment.returnError(mTaskFragment
+								.getStringSafe(R.string.error_file_exists));
+						return null;
+					}
+
+					// Create the new directory
+					if (!rootProvider.mkdir(volumePath)) {
+						mTaskFragment.returnError(String.format(mTaskFragment
+								.getStringSafe(R.string.error_mkdir_fail),
+								volumePath));
+						return null;
+					}
+				} catch (IOException e) {
+					mTaskFragment.returnError(e.getMessage());
+					return null;
+				}
+
+				EncFSFileProvider fileProvider = mVolumeFs
+						.getFileProvider(volumePath);
+
+				// Create the volume
+				try {
+					new EncFSVolumeBuilder().withFileProvider(fileProvider)
+							.withConfig(EncFSConfigFactory.createDefault())
+							.withPbkdf2Provider(mApp.getNativePBKDF2Provider())
+							.withPassword(mPassword).writeVolumeConfig();
+				} catch (Exception e) {
+					mTaskFragment.returnError(e.getMessage());
+					return null;
+				}
+
+				return new CreateVolumeTaskResult(mVolumeName, volumePath,
+						mVolumeFs);
+			}
+
+			// Run after the task is complete
+			@Override
+			protected void onPostExecute(CreateVolumeTaskResult result) {
+				super.onPostExecute(result);
+
+				if (!isCancelled()) {
+					if (result != null) {
+						mTaskFragment.returnResult(result);
+					}
 				}
 			}
 		}
 	}
 
-	private class DeleteVolumeTask extends EDAsyncTask<String, Void, Boolean> {
+	private class DeleteVolumeTaskFragment extends TaskFragment {
 
-		// Volume being deleted
-		private Volume volume;
+		private Volume mVolume;
 
-		public DeleteVolumeTask(ProgressDialog dialog, Volume volume) {
-			super();
-			setProgressDialog(dialog);
-			this.volume = volume;
+		public DeleteVolumeTaskFragment(Activity activity, Volume volume) {
+			super(activity);
+			this.mVolume = volume;
 		}
 
 		@Override
-		protected Boolean doInBackground(String... args) {
-
-			// link or authenticate account if needed
-			Account account = volume.getFileSystem().getAccount();
-			if (account != null) {
-				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
-					mErrDialogText = String.format(
-							getString(R.string.account_login_error), volume
-									.getFileSystem().getName());
-					return false;
-				}
-			}
-
-			EncFSFileProvider rootProvider = volume.getFileSystem()
-					.getFileProvider("/");
-
-			try {
-				if (!rootProvider.exists(volume.getPath())) {
-					mErrDialogText = String.format(
-							getString(R.string.error_dir_not_found),
-							volume.getPath());
-					return false;
-				}
-
-				// Delete the volume
-				if (!rootProvider.delete(volume.getPath())) {
-					mErrDialogText = String.format(
-							getString(R.string.error_delete_fail),
-							volume.getPath());
-					return false;
-				}
-			} catch (IOException e) {
-				mErrDialogText = e.getMessage();
-				return false;
-			}
-
-			return true;
+		protected int getTaskId() {
+			return ASYNC_TASK_DELETE;
 		}
 
-		// Run after the task is complete
 		@Override
-		protected void onPostExecute(Boolean result) {
-			super.onPostExecute(result);
+		protected EDAsyncTask<Void, Void, Volume> createTask() {
+			return new DeleteVolumeTask(this);
+		}
 
-			if (myDialog.isShowing()) {
-				myDialog.dismiss();
+		private class DeleteVolumeTask extends EDAsyncTask<Void, Void, Volume> {
+
+			public DeleteVolumeTask(TaskFragment fragment) {
+				super(fragment);
 			}
 
-			if (!isCancelled()) {
-				if (result) {
-					((VolumeListActivity) getActivity()).deleteVolume(volume);
-				} else {
-					((VolumeListActivity) getActivity())
-							.showDialog(DIALOG_ERROR);
+			@Override
+			protected ProgressDialog createProgressDialog(Activity activity) {
+				// We only use a progress spinner
+				mProgressDialogSpinnerOnly = true;
+				mProgressDialogTitle = String.format(
+						activity.getString(R.string.delvol_dialog_title_str),
+						mVolume.getName());
+				return super.createProgressDialog(activity);
+			}
+
+			@Override
+			protected Volume doInBackground(Void... args) {
+
+				// link or authenticate account if needed
+				Account account = mVolume.getFileSystem().getAccount();
+				if (account != null) {
+					// XXX: we should clear activity usage from here
+					mTaskFragment.blockForActivity();
+					if (account.linkOrAuthIfNeeded(mActivity, TAG) == false) {
+						mTaskFragment.returnError(String.format(mTaskFragment
+								.getStringSafe(R.string.account_login_error),
+								mVolume.getFileSystem().getName()));
+						return null;
+					}
+				}
+
+				EncFSFileProvider rootProvider = mVolume.getFileSystem()
+						.getFileProvider("/");
+
+				try {
+					if (!rootProvider.exists(mVolume.getPath())) {
+						mTaskFragment.returnError(String.format(mTaskFragment
+								.getStringSafe(R.string.error_dir_not_found),
+								mVolume.getPath()));
+						return null;
+					}
+
+					// Delete the volume
+					if (!rootProvider.delete(mVolume.getPath())) {
+						mTaskFragment.returnError(String.format(mTaskFragment
+								.getStringSafe(R.string.error_delete_fail),
+								mVolume.getPath()));
+						return null;
+					}
+				} catch (IOException e) {
+					mTaskFragment.returnError(e.getMessage());
+					return null;
+				}
+
+				return mVolume;
+			}
+
+			// Run after the task is complete
+			@Override
+			protected void onPostExecute(Volume result) {
+				super.onPostExecute(result);
+
+				if (!isCancelled()) {
+					if (result != null) {
+						mTaskFragment.returnResult(result);
+					}
 				}
 			}
 		}
 	}
 
-	private class LaunchChooserTask extends EDAsyncTask<String, Void, Boolean> {
+	private class LaunchChooserTaskFragment extends TaskFragment {
 
-		// Selected volume index
-		private int item;
+		private EDApplication mApp;
 
-		public LaunchChooserTask(ProgressDialog dialog, int item) {
-			super();
-			setProgressDialog(dialog);
-			this.item = item;
+		private int mVolumeIdx;
+
+		public LaunchChooserTaskFragment(Activity activity, EDApplication app,
+				int volumeIdx) {
+			super(activity);
+			this.mVolumeIdx = volumeIdx;
+			this.mApp = app;
 		}
 
 		@Override
-		protected Boolean doInBackground(String... args) {
+		protected int getTaskId() {
+			return ASYNC_TASK_LAUNCH_CHOOSER;
+		}
 
-			FileSystem fs = mApp.getFileSystemList().get(item);
+		@Override
+		protected EDAsyncTask<Void, Void, Integer> createTask() {
+			return new LaunchChooserTask(this);
+		}
 
-			// link or authenticate account if needed
-			Account account = fs.getAccount();
-			if (account != null) {
-				if (account.linkOrAuthIfNeeded(VolumeListActivity.this, TAG) == false) {
-					mErrDialogText = String.format(
-							getString(R.string.account_login_error),
-							fs.getName());
-					return false;
-				}
+		// EDAsyncTask for launching file chooser
+		private class LaunchChooserTask extends
+				EDAsyncTask<Void, Void, Integer> {
+
+			public LaunchChooserTask(TaskFragment fragment) {
+				super(fragment);
 			}
 
+			@Override
+			protected ProgressDialog createProgressDialog(Activity activity) {
+				// We only use a progress spinner
+				mProgressDialogSpinnerOnly = true;
+				mProgressDialogTitle = activity
+						.getString(R.string.launching_chooser);
+				return super.createProgressDialog(activity);
+			}
+
+			@Override
+			protected Integer doInBackground(Void... args) {
+
+				FileSystem fs = mApp.getFileSystemList().get(mVolumeIdx);
+
+				// link or authenticate account if needed
+				Account account = fs.getAccount();
+				if (account != null) {
+					// XXX: we should clear activity usage from here
+					mTaskFragment.blockForActivity();
+					if (account.linkOrAuthIfNeeded(mActivity, TAG) == false) {
+						mTaskFragment.returnError(String.format(mTaskFragment
+								.getStringSafe(R.string.account_login_error),
+								fs.getName()));
+						return -1;
+					}
+				}
+
+				return mVolumeIdx;
+			}
+
+			// Run after the task is complete
+			@Override
+			protected void onPostExecute(Integer result) {
+				super.onPostExecute(result);
+
+				if (!isCancelled()) {
+					if (result >= 0) {
+						mTaskFragment.returnResult(result);
+					}
+				}
+			}
+		}
+
+	}
+
+	// Method called from a TaskFragment to return task result
+	@Override
+	public void onTaskResult(int taskId, Object result) {
+		removeTaskFragment();
+		switch (taskId) {
+		case ASYNC_TASK_LAUNCH_CHOOSER:
+			int volumeIdx = (Integer) result;
 			if (mVolumeOp == VOLUME_OP_IMPORT) {
-				launchFileChooser(FileChooserActivity.VOLUME_PICKER_MODE, item);
+				launchFileChooser(FileChooserActivity.VOLUME_PICKER_MODE,
+						volumeIdx);
 			} else {
-				launchFileChooser(FileChooserActivity.CREATE_VOLUME_MODE, item);
+				launchFileChooser(FileChooserActivity.CREATE_VOLUME_MODE,
+						volumeIdx);
 			}
+			break;
+		case ASYNC_TASK_DELETE:
+			Volume volume = (Volume) result;
+			deleteVolume(volume);
+			break;
+		case ASYNC_TASK_CREATE:
+			CreateVolumeTaskResult cvtr = (CreateVolumeTaskResult) result;
+			importVolume(cvtr.volumeName, cvtr.volumePath, cvtr.volumeFs);
+			break;
+		case ASYNC_TASK_UNLOCK:
+			UnlockVolumeTaskResult ovtr = (UnlockVolumeTaskResult) result;
 
-			return true;
-		}
+			if (ovtr.invalidCachedKey == true) {
+				// Show toast for invalid password
+				Toast.makeText(getApplicationContext(),
+						getString(R.string.save_pass_invalid_str),
+						Toast.LENGTH_SHORT).show();
 
-		// Run after the task is complete
-		@Override
-		protected void onPostExecute(Boolean result) {
-			super.onPostExecute(result);
+				// Invalidate cached key from DB
+				mApp.getDbHelper().clearKey(mSelectedVolume);
 
-			if (myDialog.isShowing()) {
-				myDialog.dismiss();
-			}
+				// Kick off password dialog
+				showDialog(DIALOG_VOL_PASS);
+			} else {
+				if (ovtr.volume != null) {
+					mSelectedVolume.unlock(ovtr.volume);
+					mAdapter.notifyDataSetChanged();
 
-			if (!isCancelled()) {
-				if (!result) {
-					((VolumeListActivity) getActivity())
-							.showDialog(DIALOG_ERROR);
+					if (ovtr.cachedKey == null) {
+						// Cache key in DB if preference is enabled
+						if (mPrefs.getBoolean("cache_key", false)) {
+							byte[] keyToCache = ovtr.volume.getDerivedKeyData();
+							mApp.getDbHelper().cacheKey(mSelectedVolume,
+									keyToCache);
+						}
+					}
+
+					launchVolumeBrowser(mSelectedVolIdx);
 				}
 			}
+			break;
+		default:
+			Log.d(TAG, "Unknown task id: " + taskId);
+			break;
 		}
+
+	}
+
+	// Method called from a TaskFragment to report task error
+	@Override
+	public void onTaskError(int taskId, String errorText) {
+		mErrDialogText = errorText;
+		removeTaskFragment();
+		// Show error dialog from the UI thread
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				showDialog(DIALOG_ERROR);
+			}
+		});
 	}
 }

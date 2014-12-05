@@ -30,7 +30,7 @@
     <string name="encrypt_dialog_title_str">Encrypting \'%s\'</string>
     <string name="menu_import_files">Import Files</string>
     <string name="import_dialog_title_str">Importing %s</string>
-    <string name="import_dialog_msg_str">[%1$d/%2$d]\nImporting %3$s</string>
+    <string name="import_dialog_msg_str">Importing %s</string>
     <string name="btn_yes_str">Yes</string>
     <string name="btn_no_str">No</string>
     <string name="del_dialog_title_str">Are you sure you want to delete %s ?</string>
@@ -45,13 +45,13 @@
     <string name="menu_copy">Copy</string>
     <string name="error_copy_fail">Failed to copy \'%1$s\' to \'%2$s\'</string>
     <string name="copy_dialog_title_str">Copying file(s)</string>
-    <string name="copy_dialog_msg_str">[%1$d/%2$d]\nCopying %3$s</string>
+    <string name="copy_dialog_msg_str">Copying %s</string>
     <string name="cut_dialog_title_str">Moving file(s)</string>
-    <string name="cut_dialog_msg_str">[%1$d/%2$d]\nMoving %3$s</string>
+    <string name="cut_dialog_msg_str">Moving %s</string>
     <string name="menu_export">Export</string>
     <string name="menu_export_sd">Export to Device</string>
     <string name="export_dialog_title_str">Exporting %s</string>
-    <string name="export_dialog_msg_str">[%1$d/%2$d]\nExporting %3$s</string>
+    <string name="export_dialog_msg_str">Exporting %s</string>
     <string name="error_file_exists">File \'%s\' already exists</string>
     <string name="menu_create_vol">Create Volume</string>
     <string name="mkvol_dialog_title_str">Creating Volume \'%s\'</string>
@@ -61,7 +61,7 @@
     <string name="mkdir_dialog_title_str">Creating directory \'%s\'</string>
     <string name="rename_dialog_title_str">Renaming \'%1$s\' to \'%2$s\'</string>
     <string name="delete_dialog_title_str">Deleting %s</string>
-    <string name="delete_dialog_msg_str">[%1$d/%2$d]\nDeleting %3$s</string>
+    <string name="delete_dialog_msg_str">Deleting %s</string>
     <string name="error_no_sd_card">SD card not available!</string>
     <string name="error_sd_readonly">Can\'t write to SD card!</string>
     <string name="error_path_exists">Path \'%s\' already exists!</string>

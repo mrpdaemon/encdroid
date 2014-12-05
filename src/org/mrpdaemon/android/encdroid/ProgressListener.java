@@ -25,40 +25,27 @@ import android.app.Activity;
 public class ProgressListener extends EncFSProgressListener {
 
 	// Task that owns this progress listener
-	private EDAsyncTask<Void, Void, Boolean> myTask;
+	private EDAsyncTask<?, ?, ?> myTask;
 
-	public ProgressListener(EDAsyncTask<Void, Void, Boolean> task) {
+	public ProgressListener(EDAsyncTask<?, ?, ?> task) {
 		myTask = task;
 	}
 
 	@Override
 	public void handleEvent(int eventType) {
 
-		// Get the current activity that owns the task
-		Activity activity = myTask.getActivity();
-		if (activity == null) {
-			return;
-		}
-
 		switch (eventType) {
 		case ProgressListener.FILES_COUNTED_EVENT:
-			activity.runOnUiThread(new Runnable() {
-				@Override
-				public void run() {
-					myTask.setMaxProgress(getNumFiles());
-				}
-			});
+			myTask.getProgress().setTotalFiles(getNumFiles());
+			myTask.updateProgress();
 			break;
 		case ProgressListener.NEW_FILE_EVENT:
-			myTask.setFileInProgress(getCurrentFile());
+			myTask.getProgress().setCurrentFileName(getCurrentFile());
+			myTask.updateProgress();
 			break;
 		case ProgressListener.FILE_PROCESS_EVENT:
-			activity.runOnUiThread(new Runnable() {
-				@Override
-				public void run() {
-					myTask.incrementProgressBy(1);
-				}
-			});
+			myTask.getProgress().incCurrentFileIdx();
+			myTask.updateProgress();
 			break;
 		case ProgressListener.OP_COMPLETE_EVENT:
 			break;
