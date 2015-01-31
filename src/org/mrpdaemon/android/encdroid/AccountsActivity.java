@@ -28,21 +28,27 @@ import android.app.ListFragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MenuItem;
 
 public class AccountsActivity extends Activity {
 
+	private final String FRAGMENT_TAG = "AccountFragment";
+
+	private final String LOG_TAG = "AccountsActivity";
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		// Display the preference fragment
+		// Display the accounts fragment
 		FragmentManager mFragmentManager = getFragmentManager();
 		FragmentTransaction mFragmentTransaction = mFragmentManager
 				.beginTransaction();
 		EDAccountsFragment mAccountsFragment = new EDAccountsFragment();
-		mFragmentTransaction.replace(android.R.id.content, mAccountsFragment);
+		mFragmentTransaction.replace(android.R.id.content, mAccountsFragment,
+				FRAGMENT_TAG);
 		mFragmentTransaction.commit();
 
 		getActionBar().setDisplayHomeAsUpEnabled(true);
@@ -76,6 +82,20 @@ public class AccountsActivity extends Activity {
 			return true;
 		}
 		return super.onKeyDown(keyCode, event);
+	}
+
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+
+		// Feed the activity result into the fragment
+		EDAccountsFragment mAccountsFragment = (EDAccountsFragment) getFragmentManager()
+				.findFragmentByTag(FRAGMENT_TAG);
+		try {
+			mAccountsFragment.onActivityResult(requestCode, resultCode, data);
+		} catch (Exception e) {
+			Log.e(LOG_TAG, e.getMessage());
+		}
 	}
 
 	public class EDAccountsFragment extends ListFragment {
