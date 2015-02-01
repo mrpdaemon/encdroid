@@ -51,6 +51,8 @@ public class DBHelper extends SQLiteOpenHelper {
 	public static final String DB_COL_CONFIGPATH = "configPath";
 	public static final String DB_COL_TYPE = "type";
 	public static final String DB_COL_KEY = "key";
+	public static final String DB_COL_PIN = "pin";
+	public static final String DB_COL_PINCOUNTER = "pinctr"; // counts unsuccessful PIN attempts
 
 	private static final String[] NO_ARGS = {};
 
@@ -67,7 +69,7 @@ public class DBHelper extends SQLiteOpenHelper {
 	public void onCreate(SQLiteDatabase db) {
 		String sqlCmd = "CREATE TABLE " + DB_TABLE + " (" + DB_COL_ID
 				+ " int primary key, " + DB_COL_NAME + " text, " + DB_COL_PATH
-				+ " text, " + DB_COL_KEY + " text, " + DB_COL_TYPE + " int, "
+				+ " text, " + DB_COL_KEY + " text, " + DB_COL_PIN + " text, "+ DB_COL_PINCOUNTER + " int, "+ DB_COL_TYPE + " int, "
 				+ DB_COL_CONFIGPATH + " text)";
 		Log.d(TAG, "onCreate() executing SQL: " + sqlCmd);
 		db.execSQL(sqlCmd);
@@ -140,6 +142,17 @@ public class DBHelper extends SQLiteOpenHelper {
 		db.update(DB_TABLE, values, DB_COL_NAME + "=? AND " + DB_COL_PATH
 				+ "=?", new String[] { volume.getName(), volume.getPath() });
 	}
+	
+	public void setPIN(Volume volume, String pin) {
+		SQLiteDatabase db = getWritableDatabase();
+
+		Log.d(TAG, "setPIN() for volume" + volume.getName());
+
+		ContentValues values = new ContentValues();
+		values.put(DB_COL_PIN, pin);
+		db.update(DB_TABLE, values, DB_COL_NAME + "=? AND " + DB_COL_PATH
+				+ "=?", new String[] { volume.getName(), volume.getPath() });
+	}
 
 	public void clearKey(Volume volume) {
 		SQLiteDatabase db = getWritableDatabase();
@@ -148,6 +161,17 @@ public class DBHelper extends SQLiteOpenHelper {
 
 		ContentValues values = new ContentValues();
 		values.putNull(DB_COL_KEY);
+		db.update(DB_TABLE, values, DB_COL_NAME + "=? AND " + DB_COL_PATH
+				+ "=?", new String[] { volume.getName(), volume.getPath() });
+	}
+	
+	public void clearPIN(Volume volume) {
+		SQLiteDatabase db = getWritableDatabase();
+
+		Log.d(TAG, "clearPIN() for volume" + volume.getName());
+
+		ContentValues values = new ContentValues();
+		values.putNull(DB_COL_PIN);
 		db.update(DB_TABLE, values, DB_COL_NAME + "=? AND " + DB_COL_PATH
 				+ "=?", new String[] { volume.getName(), volume.getPath() });
 	}
@@ -175,6 +199,21 @@ public class DBHelper extends SQLiteOpenHelper {
 			}
 		}
 
+		return null;
+	}
+	
+	public String getPIN(Volume volume) {
+		SQLiteDatabase db = getReadableDatabase();
+
+		Cursor cursor = db.query(DB_TABLE, NO_ARGS, DB_COL_NAME + "=? AND "
+				+ DB_COL_PATH + "=?",
+				new String[] { volume.getName(), volume.getPath() }, null,
+				null, null);
+
+		if (cursor.moveToFirst()) {
+			String pin = cursor.getString(cursor.getColumnIndex(DB_COL_PIN));
+			return pin;
+		}
 		return null;
 	}
 
