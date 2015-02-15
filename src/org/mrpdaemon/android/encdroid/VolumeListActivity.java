@@ -873,7 +873,8 @@ public class VolumeListActivity extends ListActivity implements
 				// a wrong PIN was given
 				// TODO: increment / check fail counter
 				//userPin = null;
-				showDialog(DIALOG_VOL_PIN);
+				mErrDialogText = getString(R.string.error_wrong_pin);
+				showDialog(DIALOG_ERROR);
 				return;
 			}
 		}
