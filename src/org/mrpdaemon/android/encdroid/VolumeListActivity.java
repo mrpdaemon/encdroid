@@ -491,8 +491,6 @@ public class VolumeListActivity extends ListActivity implements
 								if(value.length() > 0) {
 									mApp.getDbHelper().setPIN(mSelectedVolume,value.toString());
 								}
-								
-								// TODO: does this open the correct volume?
 								launchVolumeBrowser(mSelectedVolIdx);
 								break;
 							case DIALOG_VOL_CREATEPASS:
@@ -874,8 +872,6 @@ public class VolumeListActivity extends ListActivity implements
 				return;
 			} else {
 				// a wrong PIN was given
-				// TODO: increment / check fail counter
-				//userPin = null;
 				int pinAttempts = mApp.getDbHelper().getPINAttempts(mSelectedVolume);
 				
 				// we tolerate 3 wrong attempts, after that we delete the cached key
@@ -1453,10 +1449,10 @@ public class VolumeListActivity extends ListActivity implements
 									keyToCache);
 							// Ask user for a pin for this volume
 							showDialog(DIALOG_VOL_SETPIN);
+							break;
 						}
 					}
-					// TODO: does this work as it should?
-					//launchVolumeBrowser(mSelectedVolIdx);
+					launchVolumeBrowser(mSelectedVolIdx);
 				}
 			}
 			break;
