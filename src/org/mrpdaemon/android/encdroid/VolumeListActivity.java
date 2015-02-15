@@ -865,6 +865,9 @@ public class VolumeListActivity extends ListActivity implements
 			if ((savedPin == null) || ((userPin != null) && userPin.equals(savedPin.toString()))) {
 				// all is well, give out cachedKey
 				cachedKey = mApp.getDbHelper().getCachedKey(mSelectedVolume);
+				if(savedPin != null) {
+					mApp.getDbHelper().setPINAttempts(mSelectedVolume, 0);
+				}
 			} else if (userPin == null) {
 				// no PIN given, ask user for one
 				showDialog(DIALOG_VOL_PIN);
@@ -873,7 +876,17 @@ public class VolumeListActivity extends ListActivity implements
 				// a wrong PIN was given
 				// TODO: increment / check fail counter
 				//userPin = null;
-				mErrDialogText = getString(R.string.error_wrong_pin);
+				int pinAttempts = mApp.getDbHelper().getPINAttempts(mSelectedVolume);
+				
+				// we tolerate 3 wrong attempts, after that we delete the cached key
+				if(pinAttempts < 2) {
+					mApp.getDbHelper().setPINAttempts(mSelectedVolume, pinAttempts+1);
+					mErrDialogText = getString(R.string.error_wrong_pin);
+				} else {
+					mApp.getDbHelper().clearKey(mSelectedVolume);
+					mApp.getDbHelper().clearPIN(mSelectedVolume);
+					mErrDialogText = getString(R.string.error_wrong_pin_three_times);
+				}
 				showDialog(DIALOG_ERROR);
 				return;
 			}
