@@ -201,6 +201,15 @@ public class DBHelper extends SQLiteOpenHelper {
 
 		db.execSQL("UPDATE " + DB_TABLE + " SET " + DB_COL_KEY + " = NULL");
 	}
+	
+	public void clearAllPINs() {
+		SQLiteDatabase db = getWritableDatabase();
+
+		Log.d(TAG, "clearAllPINs()");
+
+		db.execSQL("UPDATE " + DB_TABLE + " SET " + DB_COL_PIN + " = NULL");
+		db.execSQL("UPDATE " + DB_TABLE + " SET " + DB_COL_PINATTEMPTS + " = 0");
+	}
 
 	public byte[] getCachedKey(Volume volume) {
 		SQLiteDatabase db = getReadableDatabase();
