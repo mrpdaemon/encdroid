@@ -39,7 +39,7 @@ public class DBHelper extends SQLiteOpenHelper {
 	public static final String DB_NAME = "volume.db";
 
 	// Database version
-	public static final int DB_VERSION = 4;
+	public static final int DB_VERSION = 5;
 
 	// Volume table name
 	public static final String DB_TABLE = "volumes";
@@ -77,11 +77,17 @@ public class DBHelper extends SQLiteOpenHelper {
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		// Adding column DB_COL_CONFIGPATH on upgrade
-		if (oldVersion == 3) {
+		// Adding missing columns on upgrade
+		if (oldVersion == 3 || oldVersion == 4) {
 			Log.d(TAG, "onUpgrade() Upgrading DB");
+			if(oldVersion == 3) {
+				db.execSQL("ALTER TABLE " + DB_TABLE + " ADD COLUMN "
+						+ DB_COL_CONFIGPATH + " TEXT");
+			}
 			db.execSQL("ALTER TABLE " + DB_TABLE + " ADD COLUMN "
-					+ DB_COL_CONFIGPATH + " TEXT");
+					+ DB_COL_PIN + " TEXT");
+			db.execSQL("ALTER TABLE " + DB_TABLE + " ADD COLUMN "
+					+ DB_COL_PINATTEMPTS + " INT");
 		} else {
 			db.execSQL("DROP TABLE IF EXISTS " + DB_TABLE);
 			Log.d(TAG, "onUpgrade() recreating DB");
