@@ -9,6 +9,10 @@
     <string name="no_volumes">No EncFS volumes configured. Choose \&quot;Import Volume\&quot; or \&quot;Create Volume\&quot;  from the menu to add volumes.</string>
     <string name="menu_select">Select</string>
     <string name="pwd_dialog_title_str">Enter password:</string>
+    <string name="pin_dialog_title_str">Enter PIN:</string>
+    <string name="set_pin_dialog_title_str">Set PIN (leave empty for no PIN):</string>
+    <string name="error_wrong_pin">Wrong PIN entered!</string>
+    <string name="error_wrong_pin_three_times">Wrong PIN entered three times! Volume password has been deleted.</string>
     <string name="btn_ok_str">OK</string>
     <string name="pbkdf_dialog_title_str">Deriving password key</string>
     <string name="pbkdf_dialog_msg_str">Can take VERY long for some volumes. Consider enabling password key caching in Settings.</string>

@@ -137,6 +137,8 @@ public class EDPreferenceActivity extends Activity {
 					Log.d(TAG, "Key caching disabled, clearing cached keys.");
 					// Need to clear all cached keys
 					mApp.getDbHelper().clearAllKeys();
+					// Might need to clear all saved PINs as well
+					mApp.getDbHelper().clearAllPINs();
 				} else {
 					Log.d(TAG, "Key caching enabled.");
 				}

@@ -86,6 +86,8 @@ public class VolumeListActivity extends ListActivity implements
 	private final static int DIALOG_VOL_DELETE = 5;
 	private final static int DIALOG_FS_TYPE = 6;
 	private final static int DIALOG_ERROR = 7;
+	private final static int DIALOG_VOL_PIN = 8;
+	private final static int DIALOG_VOL_SETPIN = 9;
 
 	// Volume operation types
 	private final static int VOLUME_OP_IMPORT = 0;
@@ -336,6 +338,20 @@ public class VolumeListActivity extends ListActivity implements
 							| InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
 				}
 			}
+		case DIALOG_VOL_PIN:
+			if (id == DIALOG_VOL_PIN) {
+				if (input != null) {
+					input.setInputType(InputType.TYPE_NUMBER_VARIATION_PASSWORD
+							| InputType.TYPE_CLASS_NUMBER);
+				}
+			}
+		case DIALOG_VOL_SETPIN:
+			if (id == DIALOG_VOL_SETPIN) {
+				if (input != null) {
+					input.setInputType(InputType.TYPE_NUMBER_VARIATION_PASSWORD
+							| InputType.TYPE_CLASS_NUMBER);
+				}
+			}
 		case DIALOG_VOL_CREATEPASS:
 		case DIALOG_VOL_NAME:
 		case DIALOG_VOL_CREATE:
@@ -418,6 +434,8 @@ public class VolumeListActivity extends ListActivity implements
 
 		switch (id) {
 		case DIALOG_VOL_PASS: // Password dialog
+		case DIALOG_VOL_PIN:  // Enter PIN dialog
+		case DIALOG_VOL_SETPIN: // Set PIN dialog
 			if (mSelectedVolume == null) {
 				// Can happen when restoring a killed activity
 				return null;
@@ -429,8 +447,17 @@ public class VolumeListActivity extends ListActivity implements
 
 			// Hide password input
 			input.setTransformationMethod(new PasswordTransformationMethod());
-
-			alertBuilder.setTitle(getString(R.string.pwd_dialog_title_str));
+			
+			String titleString;
+			if(id == DIALOG_VOL_PIN) {
+				titleString = getString(R.string.pin_dialog_title_str);
+			} else if (id == DIALOG_VOL_SETPIN) {
+				titleString = getString(R.string.set_pin_dialog_title_str);
+			} else {
+				titleString = getString(R.string.pwd_dialog_title_str);
+			}
+			
+			alertBuilder.setTitle(titleString);
 			alertBuilder.setView(input);
 			alertBuilder.setPositiveButton(getString(R.string.btn_ok_str),
 					new DialogInterface.OnClickListener() {
@@ -454,6 +481,17 @@ public class VolumeListActivity extends ListActivity implements
 												.getCustomConfigPath());
 								addTaskFragment(unlockTask);
 								unlockTask.startTask();
+								break;
+							case DIALOG_VOL_PIN:
+								// Unlock with cached pass and PIN
+								unlockSelectedVolume(value.toString());
+								break;
+							case DIALOG_VOL_SETPIN:
+								
+								if(value.length() > 0) {
+									mApp.getDbHelper().setPIN(mSelectedVolume,value.toString());
+								}
+								launchVolumeBrowser(mSelectedVolIdx);
 								break;
 							case DIALOG_VOL_CREATEPASS:
 								// Launch async task to create volume
@@ -805,14 +843,52 @@ public class VolumeListActivity extends ListActivity implements
 	 * Unlock the currently selected volume
 	 */
 	private void unlockSelectedVolume() {
+		unlockSelectedVolume(null);
+	}
+	
+	/**
+	 * Unlock the currently selected volume using a PIN
+	 */
+	private void unlockSelectedVolume(String userPin) {
 		mVolumeFileSystem = mSelectedVolume.getFileSystem();
-
-		// If key caching is enabled, see if a key is cached
+		
+		// If key caching is enabled, see if a PIN is set and a key is cached
+		String savedPin = null;
 		byte[] cachedKey = null;
-		if (mPrefs.getBoolean("cache_key", false)) {
-			cachedKey = mApp.getDbHelper().getCachedKey(mSelectedVolume);
-		}
 
+		if (mPrefs.getBoolean("cache_key", false)) {
+			
+			savedPin = mApp.getDbHelper().getPIN(mSelectedVolume);
+			
+			if ((savedPin == null) || ((userPin != null) && userPin.equals(savedPin.toString()))) {
+				// all is well, give out cachedKey
+				cachedKey = mApp.getDbHelper().getCachedKey(mSelectedVolume);
+				if(savedPin != null) {
+					mApp.getDbHelper().setPINAttempts(mSelectedVolume, 0);
+				}
+			} else if (userPin == null) {
+				// no PIN given, ask user for one
+				showDialog(DIALOG_VOL_PIN);
+				return;
+			} else {
+				// a wrong PIN was given
+				int pinAttempts = mApp.getDbHelper().getPINAttempts(mSelectedVolume);
+				
+				// we tolerate 3 wrong attempts, after that we delete the cached key
+				if(pinAttempts < 2) {
+					mApp.getDbHelper().setPINAttempts(mSelectedVolume, pinAttempts+1);
+					mErrDialogText = getString(R.string.error_wrong_pin);
+				} else {
+					mApp.getDbHelper().clearKey(mSelectedVolume);
+					mApp.getDbHelper().clearPIN(mSelectedVolume);
+					mErrDialogText = getString(R.string.error_wrong_pin_three_times);
+				}
+				showDialog(DIALOG_ERROR);
+				return;
+			}
+		}
+	
+		// pin is ok or missing but no key is cached
 		if (cachedKey == null) {
 			showDialog(DIALOG_VOL_PASS);
 		} else {
@@ -842,16 +918,16 @@ public class VolumeListActivity extends ListActivity implements
 
 		// Volume type
 		private FileSystem mFileSystem;
-
+		
 		// Cached key
 		private byte[] mCachedKey;
-
+		
 		// Path of the volume to unlock
 		private String mVolumePath;
 
 		// Password for unlocking (optional if cached key is given)
 		private String mPassword;
-
+		
 		// Optional custom config path
 		private String mConfigPath;
 
@@ -1371,9 +1447,11 @@ public class VolumeListActivity extends ListActivity implements
 							byte[] keyToCache = ovtr.volume.getDerivedKeyData();
 							mApp.getDbHelper().cacheKey(mSelectedVolume,
 									keyToCache);
+							// Ask user for a pin for this volume
+							showDialog(DIALOG_VOL_SETPIN);
+							break;
 						}
 					}
-
 					launchVolumeBrowser(mSelectedVolIdx);
 				}
 			}
