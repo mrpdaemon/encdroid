@@ -1,2 +1,0 @@
-# Ignore native library files since they're in jni/
-*.so

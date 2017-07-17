@@ -1,13 +1,7 @@
-.classpath
-.project
-.cproject
-.settings
-bin
-gen
-obj
-proguard.cfg
-proguard-project.txt
 local.properties
 .vimrc
 cscope*
-libs/*.properties
+.idea
+build
+*.iml
+.gradle
