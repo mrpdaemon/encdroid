@@ -24,8 +24,7 @@ to build the debug APK from the command line use the following:
 
 Once the build completes the resulting APK will be under `encdroid/build/outputs/apk/endroid-debug.apk`
 
-For a fully functional build see the instructions below on "Dropbox API keys"
-and "Google Play Services".
+For a fully functional build see the instructions below on "Dropbox API keys".
 
 ### Target API Level
 
