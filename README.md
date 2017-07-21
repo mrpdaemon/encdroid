@@ -56,13 +56,12 @@ the libs/ folder. The following notable libraries are used:
 
 * encfs-java
 * dropbox-android-sdk
-* httpmime
-* json_simple
+* json_simple (required by dropbox-android-sdk)
 * Google API client
-* Google http client
+* Google HTTP client
 * Google API service for drive
-* Google OAuth client
-* Jackson
+* Google Play services auth
+* Google Play services for drive
 
 Note that [openssl-android](https://github.com/guardianproject/openssl-android)
 is also a requirement, however this repository contains prebuilt versions of the
