@@ -78,10 +78,11 @@ public abstract class Account {
 	 */
 	public boolean linkOrAuthIfNeeded(Context context, String logTag) {
 		if (!isLinked() || !isAuthenticated()) {
+			startLinkOrAuth(context);
+
 			// Wait for link is longer than waiting for authentication
 			int waitTimeout = !isLinked() ? LINK_TIMEOUT : AUTH_THREAD_TIMEOUT;
 
-			startLinkOrAuth(context);
 			/*
 			 * If the account isn't yet authenticated and there's authentication
 			 * in progress we loop around until the thread is done.

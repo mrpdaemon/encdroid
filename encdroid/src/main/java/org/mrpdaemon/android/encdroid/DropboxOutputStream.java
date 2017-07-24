@@ -20,24 +20,24 @@ package org.mrpdaemon.android.encdroid;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 
+import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.dropbox.client2.DropboxAPI;
-import com.dropbox.client2.android.AndroidAuthSession;
-import com.dropbox.client2.exception.DropboxException;
+import com.dropbox.core.DbxException;
+import com.dropbox.core.DbxUploader;
+import com.dropbox.core.v2.DbxClientV2;
+import com.dropbox.core.v2.files.WriteMode;
 
-public class DropboxOutputStream extends OutputStream {
+class DropboxOutputStream extends OutputStream {
 
 	private static final String TAG = "DropboxOutputStream";
 
-	// Pipe's input end to hand off to DropboxAPI.putFile()
-	private PipedInputStream pipeDropbox;
+	// Uploader object
+	private DbxUploader mUploader;
 
-	// Pipe's output end that this class writes to
-	private PipedOutputStream pipeToWrite;
+	// Upload output stream
+	private OutputStream mUploadOutputStream;
 
 	// Whether the upload failed
 	private volatile boolean failed;
@@ -45,41 +45,24 @@ public class DropboxOutputStream extends OutputStream {
 	// Failure message
 	private volatile String failMessage;
 
-	// Thread for stopping
-	private Thread thread;
-
-	// Length
-	private final long fileLength;
-
-	public DropboxOutputStream(final DropboxAPI<AndroidAuthSession> api,
-			final String dstPath, long length) throws IOException {
+	DropboxOutputStream(final DbxClientV2 dbxClientV2,
+						final String dstPath) throws IOException {
 		this.failed = false;
-		this.fileLength = length;
 
 		Log.d(TAG, "Creating output stream for path " + dstPath);
 
-		// Create pipes
-		pipeDropbox = new PipedInputStream();
-		pipeToWrite = new PipedOutputStream(pipeDropbox);
-
-		thread = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					api.putFileOverwrite(dstPath, pipeDropbox, fileLength, null);
-				} catch (DropboxException e) {
-					Logger.logException(TAG, e);
-					// Propagate the error
-					if (e.getMessage() != null) {
-						DropboxOutputStream.this.fail(e.getMessage());
-					} else {
-						DropboxOutputStream.this.fail(e.toString());
-					}
-				}
+		try {
+			mUploader = dbxClientV2.files().uploadBuilder(dstPath).withMode(WriteMode.OVERWRITE).start();
+			mUploadOutputStream = mUploader.getOutputStream();
+		} catch (DbxException e) {
+			Logger.logException(TAG, e);
+			// Propagate the error
+			if (e.getMessage() != null) {
+				DropboxOutputStream.this.fail(e.getMessage());
+			} else {
+				DropboxOutputStream.this.fail(e.toString());
 			}
-		});
-
-		thread.start();
+		}
 	}
 
 	private void fail(String message) {
@@ -103,16 +86,20 @@ public class DropboxOutputStream extends OutputStream {
 			throw new IOException(getFailMessage());
 		}
 
-		pipeToWrite.flush();
+		mUploadOutputStream.flush();
+		mUploadOutputStream.close();
 
 		try {
-			thread.join();
-		} catch (InterruptedException e) {
-			throw new IOException(e.getMessage());
+			mUploader.finish();
+		} catch (DbxException e) {
+		Logger.logException(TAG, e);
+		// Propagate the error
+		if (e.getMessage() != null) {
+			DropboxOutputStream.this.fail(e.getMessage());
+		} else {
+			DropboxOutputStream.this.fail(e.toString());
 		}
-
-		pipeToWrite.close();
-		pipeDropbox.close();
+	}
 	}
 
 	@Override
@@ -122,11 +109,11 @@ public class DropboxOutputStream extends OutputStream {
 		if (getFailed()) {
 			throw new IOException(getFailMessage());
 		}
-		pipeToWrite.flush();
+		mUploadOutputStream.flush();
 	}
 
 	@Override
-	public void write(byte[] buffer, int offset, int count) throws IOException {
+	public void write(@NonNull byte[] buffer, int offset, int count) throws IOException {
 		Log.v(TAG, "write() " + buffer.length + " bytes offset: " + offset
 				+ " count: " + count);
 
@@ -134,18 +121,18 @@ public class DropboxOutputStream extends OutputStream {
 			throw new IOException(getFailMessage());
 		}
 
-		pipeToWrite.write(buffer, offset, count);
+		mUploadOutputStream.write(buffer, offset, count);
 	}
 
 	@Override
-	public void write(byte[] buffer) throws IOException {
+	public void write(@NonNull byte[] buffer) throws IOException {
 		Log.v(TAG, "write() " + buffer.length + " bytes");
 
 		if (getFailed()) {
 			throw new IOException(getFailMessage());
 		}
 
-		pipeToWrite.write(buffer);
+		mUploadOutputStream.write(buffer);
 	}
 
 	@Override
@@ -156,6 +143,6 @@ public class DropboxOutputStream extends OutputStream {
 			throw new IOException(getFailMessage());
 		}
 
-		pipeToWrite.write(oneByte);
+		mUploadOutputStream.write(oneByte);
 	}
 }

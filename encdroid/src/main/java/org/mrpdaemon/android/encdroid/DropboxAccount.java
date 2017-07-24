@@ -26,23 +26,18 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.util.Log;
+import android.widget.Toast;
 
-import com.dropbox.client2.DropboxAPI;
-import com.dropbox.client2.android.AndroidAuthSession;
-import com.dropbox.client2.exception.DropboxException;
-import com.dropbox.client2.session.AccessTokenPair;
-import com.dropbox.client2.session.AppKeyPair;
-import com.dropbox.client2.session.Session.AccessType;
+import com.dropbox.core.DbxException;
+import com.dropbox.core.DbxRequestConfig;
+import com.dropbox.core.android.Auth;
+import com.dropbox.core.http.StandardHttpRequestor;
+import com.dropbox.core.v2.DbxClientV2;
+import com.dropbox.core.v2.users.FullAccount;
 
-public class DropboxAccount extends Account {
+class DropboxAccount extends Account {
 	// Dropbox app key
 	private final static String APP_KEY = "<YOUR APP KEY HERE>";
-
-	// Dropbox app secret
-	private final static String APP_SECRET = "<YOUR APP SECRET HERE>";
-
-	// Full access to dropbox
-	private final static AccessType ACCESS_TYPE = AccessType.DROPBOX;
 
 	// Log tag
 	private final static String TAG = "DropboxAccount";
@@ -50,15 +45,15 @@ public class DropboxAccount extends Account {
 	// Preference keys
 	private final static String PREFS_KEY = "dropbox_prefs";
 	private final static String PREF_LINKED = "is_linked";
-	private final static String PREF_ACCESS_KEY = "access_key";
-	private final static String PREF_ACCESS_SECRET = "access_secret";
+	private final static String PREF_ACCESS_TOKEN = "access_token";
 	private final static String PREF_USER_NAME = "user_name";
 
-	// Application object
-	private EDApplication mApp;
+	// Legacy preference keys (from API v1)
+	private final static String PREF_LEGACY_ACCESS_KEY = "access_key";
+	private final static String PREF_LEGACY_ACCESS_SECRET = "access_secret";
 
-	// Dropbox API object
-	private DropboxAPI<AndroidAuthSession> mApi;
+	// Dropbox API client
+	private DbxClientV2 mDbxClient;
 
 	// Whether there is a dropbox account linked
 	private boolean linked;
@@ -75,10 +70,16 @@ public class DropboxAccount extends Account {
 	// User name
 	private String userName;
 
-	public DropboxAccount(EDApplication app) {
-		mApp = app;
+	// Account
+	private FullAccount account;
 
-		mPrefs = mApp.getSharedPreferences(PREFS_KEY, 0);
+	// Info toast type
+	private static enum InfoType {
+		API_UPGRADE
+	};
+
+	DropboxAccount(EDApplication app) {
+		mPrefs = app.getSharedPreferences(PREFS_KEY, 0);
 
 		// Figure out whether we're linked to a Dropbox account
 		linked = mPrefs.getBoolean(PREF_LINKED, false);
@@ -100,74 +101,131 @@ public class DropboxAccount extends Account {
 		return R.drawable.ic_dropbox;
 	}
 
-	@Override
-	public void startLinkOrAuth(Context context) {
+	private void showInfoToast(final Activity activity,
+							   final InfoType info) {
+		if (activity != null) {
+			activity.runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					int stringId = 0;
+					switch (info) {
+						case API_UPGRADE:
+							stringId = R.string.dropbox_api_upgrade;
+							break;
+						default:
+							stringId = 0;
+							break;
+					}
+					Toast.makeText(activity, activity.getString(stringId),
+							Toast.LENGTH_SHORT).show();
+				}
+			});
+		}
+	}
 
-		AppKeyPair appKeyPair = new AppKeyPair(APP_KEY, APP_SECRET);
-		AndroidAuthSession session;
+	private void createDbxClient(final String accessToken) {
+		DbxRequestConfig requestConfig = DbxRequestConfig.newBuilder("encdroid")
+				.withHttpRequestor(StandardHttpRequestor.INSTANCE)
+				.build();
+
+		mDbxClient = new DbxClientV2(requestConfig, accessToken);
+	}
+
+	private void doLinkOrAuthWork(final Context context) {
+		Log.d(TAG, "Linking with dropbox account");
+		linkInProgress = true;
+
+		((Activity) context).runOnUiThread(new Thread(new Runnable() {
+			public void run() {
+				Auth.startOAuth2Authentication(context, APP_KEY);
+			}
+		}));
+	}
+
+	@Override
+	public void startLinkOrAuth(final Context context) {
+
+		Activity activity = null;
+
+		// We might be called from a non-Activity context, so safely dereference
+		if (context instanceof Activity) {
+			activity = (Activity) context;
+		}
 
 		if (!linked) {
 			// need to link with the account
-			Log.d(TAG, "Linking with dropbox account");
-			linkInProgress = true;
-			session = new AndroidAuthSession(appKeyPair, ACCESS_TYPE);
+			doLinkOrAuthWork(context);
 		} else {
-			Log.d(TAG,
-					"Using existing access tokens to authenticate with Dropbox");
+			String accessToken = mPrefs.getString(PREF_ACCESS_TOKEN, null);
+			if (accessToken != null) {
+				Log.d(TAG, "Reusing existing access token to authenticate to Dropbox API");
 
-			// Use tokens
-			String key = mPrefs.getString(PREF_ACCESS_KEY, null);
-			String secret = mPrefs.getString(PREF_ACCESS_SECRET, null);
+				createDbxClient(accessToken);
 
-			AccessTokenPair accessTokens = new AccessTokenPair(key, secret);
-			session = new AndroidAuthSession(appKeyPair, ACCESS_TYPE,
-					accessTokens);
+				authenticated = true;
+			} else {
+				// handle linked but no access token case (API upgrade)
+				Log.d(TAG, "Performing API upgrade to Dropbox v2 API tokens");
 
-			authenticated = true;
-		}
+				linked = false;
 
-		mApi = new DropboxAPI<AndroidAuthSession>(session);
+				showInfoToast(activity, InfoType.API_UPGRADE);
 
-		if (!linked) {
-			session.startAuthentication(context);
+				// Clear linked status and legacy tokens
+				Editor edit = mPrefs.edit();
+				edit.putBoolean(PREF_LINKED, false);
+				edit.remove(PREF_LEGACY_ACCESS_KEY);
+				edit.remove(PREF_LEGACY_ACCESS_SECRET);
+				edit.apply();
+
+				// Go through new link flow
+				doLinkOrAuthWork(context);
+			}
 		}
 	}
 
 	@Override
 	public boolean resumeLinkOrAuth() {
-		AndroidAuthSession session = mApi.getSession();
+		String accessToken = Auth.getOAuth2Token();
 
-		if (session.authenticationSuccessful()) {
+		if (accessToken != null) {
 			try {
-				// Mandatory call to complete the authentication
-				session.finishAuthentication();
-
-				// Store tokens locally in the DB for later use
-				AccessTokenPair tokens = session.getAccessTokenPair();
-				Editor edit = mPrefs.edit();
-				edit.putBoolean(PREF_LINKED, true);
-				edit.putString(PREF_ACCESS_KEY, tokens.key);
-				edit.putString(PREF_ACCESS_SECRET, tokens.secret);
+				createDbxClient(accessToken);
 
 				Thread apiThread = new Thread(new Runnable() {
 					@Override
 					public void run() {
 						try {
-							userName = mApi.accountInfo().displayName;
-						} catch (DropboxException e) {
+							account = mDbxClient.users().getCurrentAccount();
+							userName = account.getEmail();
+							authenticated = true;
+						} catch (DbxException e) {
 							Log.e(TAG, e.getMessage());
+							authenticated = false;
 						}
 					}
 				});
 				apiThread.start();
 				apiThread.join();
 
+				if (authenticated) {
+					Log.d(TAG, "Successfully authenticated to Dropbox API");
+				} else {
+					Log.e(TAG, "Failed to authenticate to Dropbox API");
+					linkInProgress = false;
+					linked = false;
+					return false;
+				}
+
+				// Store token locally in the DB for later use
+				Editor edit = mPrefs.edit();
+				edit.putBoolean(PREF_LINKED, true);
+				edit.putString(PREF_ACCESS_TOKEN, accessToken);
 				edit.putString(PREF_USER_NAME, userName);
-				edit.commit();
+				edit.apply();
 
 				linkInProgress = false;
 				linked = true;
-				authenticated = true;
 
 				Log.d(TAG, "Dropbox account for " + userName
 						+ " linked successfully");
@@ -180,7 +238,7 @@ public class DropboxAccount extends Account {
 				authenticated = false;
 				linked = false;
 				userName = "";
-				mApi = null;
+				mDbxClient = null;
 
 				return false;
 			}
@@ -191,7 +249,7 @@ public class DropboxAccount extends Account {
 			authenticated = false;
 			linked = false;
 			userName = "";
-			mApi = null;
+			mDbxClient = null;
 
 			return false;
 		}
@@ -201,21 +259,36 @@ public class DropboxAccount extends Account {
 	public void unLink() {
 		if (linked) {
 			if (authenticated) {
-				mApi.getSession().unlink();
+				Thread apiThread = new Thread(new Runnable() {
+					@Override
+					public void run() {
+						try {
+							mDbxClient.auth().tokenRevoke();
+						} catch (Exception e) {
+							Log.e(TAG, e.getMessage());
+						}
+					}
+				});
+				apiThread.start();
+				try {
+					apiThread.join();
+				} catch (Exception e) {
+					Log.e(TAG, e.getMessage());
+				}
 			}
 		}
 
 		// Clear preferences
 		Editor edit = mPrefs.edit();
 		edit.clear();
-		edit.commit();
+		edit.apply();
 
 		// Clear data
 		linkInProgress = false;
 		authenticated = false;
 		linked = false;
 		userName = "";
-		mApi = null;
+		mDbxClient = null;
 
 		Log.d(TAG, "Dropbox account unlinked");
 	}
@@ -242,7 +315,7 @@ public class DropboxAccount extends Account {
 
 	@Override
 	public EncFSFileProvider getFileProvider(String path) {
-		return new DropboxFileProvider(mApi, path);
+		return new DropboxFileProvider(mDbxClient, path);
 	}
 
 	@Override

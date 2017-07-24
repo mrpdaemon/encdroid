@@ -109,4 +109,5 @@
 	<string name="google_drive_no_play_services">Google Play Services not available on device</string>
 	<string name="multi_select_num_selected">%d selected</string>
 	<string name="multi_select_plural_files">%d files</string>
+	<string name="dropbox_api_upgrade">Dropbox integration requires re-linking to v2 API</string>
 </resources>

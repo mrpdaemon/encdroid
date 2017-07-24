@@ -18,6 +18,7 @@
 
 package org.mrpdaemon.android.encdroid;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,27 +31,28 @@ import org.mrpdaemon.sec.encfs.EncFSFileProvider;
 
 import android.util.Log;
 
-import com.dropbox.client2.DropboxAPI;
-import com.dropbox.client2.RESTUtility;
-import com.dropbox.client2.DropboxAPI.Entry;
-import com.dropbox.client2.android.AndroidAuthSession;
-import com.dropbox.client2.exception.DropboxException;
-import com.dropbox.client2.exception.DropboxServerException;
+import com.dropbox.core.DbxException;
+import com.dropbox.core.v2.DbxClientV2;
+import com.dropbox.core.v2.files.FileMetadata;
+import com.dropbox.core.v2.files.FolderMetadata;
+import com.dropbox.core.v2.files.GetMetadataErrorException;
+import com.dropbox.core.v2.files.ListFolderResult;
+import com.dropbox.core.v2.files.Metadata;
 
-public class DropboxFileProvider implements EncFSFileProvider {
+class DropboxFileProvider implements EncFSFileProvider {
 
 	// Logger tag
 	private final static String TAG = "DropboxFileProvider";
 
 	// API object
-	private DropboxAPI<AndroidAuthSession> api;
+	private DbxClientV2 mDbxClient;
 
 	// Root path for this file provider
 	private String rootPath;
 
-	public DropboxFileProvider(DropboxAPI<AndroidAuthSession> api,
+	DropboxFileProvider(DbxClientV2 dbxClient,
 			String rootPath) {
-		this.api = api;
+		this.mDbxClient = dbxClient;
 		this.rootPath = rootPath;
 	}
 
@@ -64,11 +66,15 @@ public class DropboxFileProvider implements EncFSFileProvider {
 		if (rootPath.charAt(rootPath.length() - 1) == '/') {
 			return rootPath + relPath;
 		} else {
-			return rootPath + "/" + relPath;
+			if (relPath.equals("")) {
+				return rootPath;
+			} else {
+				return rootPath + "/" + relPath;
+			}
 		}
 	}
 
-	private void handleDropboxException(DropboxException e) throws IOException {
+	private void handleDbxException(DbxException e) throws IOException {
 		Logger.logException(TAG, e);
 		if (e.getMessage() != null) {
 			throw new IOException(e.getMessage());
@@ -91,9 +97,9 @@ public class DropboxFileProvider implements EncFSFileProvider {
 		}
 
 		try {
-			api.copy(absPath(srcPath), absPath(dstPath));
-		} catch (DropboxException e) {
-			handleDropboxException(e);
+			mDbxClient.files().copy(absPath(srcPath), absPath(dstPath));
+		} catch (DbxException e) {
+			handleDbxException(e);
 		}
 
 		return true;
@@ -101,18 +107,17 @@ public class DropboxFileProvider implements EncFSFileProvider {
 
 	@Override
 	public EncFSFileInfo createFile(String path) throws IOException {
-		Entry entry;
+		FileMetadata meta;
 
 		try {
-			entry = api.putFileOverwrite(absPath(path), new FileInputStream(
-					"/dev/zero"), 0, null);
-		} catch (DropboxException e) {
-			handleDropboxException(e);
+			meta = mDbxClient.files().uploadBuilder(absPath(path)).uploadAndFinish(new FileInputStream("/dev/zero"), 0);
+		} catch (DbxException e) {
+			handleDbxException(e);
 			return null;
 		}
 
-		if (entry != null) {
-			return entryToFileInfo(entry);
+		if (meta != null) {
+			return metaToFileInfo(meta);
 		}
 
 		return null;
@@ -121,9 +126,9 @@ public class DropboxFileProvider implements EncFSFileProvider {
 	@Override
 	public boolean delete(String path) throws IOException {
 		try {
-			api.delete(absPath(path));
-		} catch (DropboxException e) {
-			handleDropboxException(e);
+			mDbxClient.files().delete((absPath(path)));
+		} catch (DbxException e) {
+			handleDbxException(e);
 		}
 
 		return true;
@@ -133,60 +138,82 @@ public class DropboxFileProvider implements EncFSFileProvider {
 	public boolean exists(String path) throws IOException {
 
 		try {
-			Entry entry = api.metadata(absPath(path), 1, null, false, null);
+			String absPath = absPath(path);
 
-			if (entry == null) {
-				return false;
+			if (absPath.equals("/")) {
+				return true;
 			}
 
-			return !entry.isDeleted;
-		} catch (DropboxServerException e) {
-			// 404 NOT FOUND is a legitimate case
-			if (e.error == DropboxServerException._404_NOT_FOUND) {
+			Metadata meta = mDbxClient.files().getMetadata(absPath(path));
+
+			return (meta != null);
+		} catch (GetMetadataErrorException gme) {
+			// Thrown in case of path not being found
+			if (gme.errorValue.isPath()) {
 				return false;
 			} else {
-				handleDropboxException(e);
+				handleDbxException(gme);
 				return false;
 			}
-		} catch (DropboxException e) {
-			handleDropboxException(e);
+		} catch (DbxException e) {
+			handleDbxException(e);
 			return false;
 		}
 	}
 
-	private EncFSFileInfo entryToFileInfo(Entry entry) {
+	private EncFSFileInfo metaToFileInfo(Metadata meta) {
 		String relativePath;
-		if (entry.path.equals(rootPath)) {
+
+		boolean isDir = meta instanceof FolderMetadata;
+		FileMetadata fileMeta = isDir ? null : (FileMetadata) meta;
+
+		String parentPath = new File(meta.getPathDisplay()).getParent();
+
+		if (meta.getPathDisplay().equals(rootPath)) {
 			// we're dealing with the root dir
 			relativePath = "/";
 		} else if (rootPath.equals("/")) {
-			relativePath = entry.parentPath();
-		} else if (entry.parentPath().equals(rootPath)) {
+			relativePath = parentPath;
+		} else if (parentPath.equals(rootPath)) {
 			// File is child of the root path
 			relativePath = "/";
 		} else {
-			relativePath = entry.parentPath().substring(rootPath.length());
+			relativePath = parentPath.substring(rootPath.length());
 		}
 
-		long modified = (entry.modified != null) ? RESTUtility.parseDate(
-				entry.modified).getTime() : 0;
+		long modified = 0;
+		if (!isDir) {
+			modified = (fileMeta.getClientModified() != null) ?
+					fileMeta.getClientModified().getTime() : 0;
+		}
 
-		return new EncFSFileInfo(entry.fileName(), relativePath, entry.isDir,
-				modified, entry.bytes, true, true, true);
+		long size = 0;
+		if (!isDir) {
+			size = fileMeta.getSize();
+		}
+
+		return new EncFSFileInfo(meta.getName(), relativePath, isDir,
+				modified, size, true, true, true);
 	}
 
 	@Override
 	public EncFSFileInfo getFileInfo(String path) throws IOException {
 		try {
-			Entry entry = api.metadata(absPath(path), 1, null, false, null);
+			String absPath = absPath(path);
 
-			if (entry != null) {
-				return entryToFileInfo(entry);
+			if (absPath.equals("/")) {
+				return null;
+			}
+
+			Metadata meta = mDbxClient.files().getMetadata(absPath);
+
+			if (meta != null) {
+				return metaToFileInfo(meta);
 			}
 
 			return null;
-		} catch (DropboxException e) {
-			handleDropboxException(e);
+		} catch (DbxException e) {
+			handleDbxException(e);
 			return null;
 		}
 	}
@@ -194,10 +221,15 @@ public class DropboxFileProvider implements EncFSFileProvider {
 	@Override
 	public boolean isDirectory(String path) throws IOException {
 		try {
-			Entry entry = api.metadata(absPath(path), 1, null, false, null);
-			return entry.isDir;
-		} catch (DropboxException e) {
-			handleDropboxException(e);
+			String absPath = absPath(path);
+
+			if (absPath.equals("/")) {
+				return true;
+			}
+			Metadata meta = mDbxClient.files().getMetadata(absPath);
+			return (meta instanceof FolderMetadata);
+		} catch (DbxException e) {
+			handleDbxException(e);
 			return false;
 		}
 	}
@@ -205,32 +237,49 @@ public class DropboxFileProvider implements EncFSFileProvider {
 	@Override
 	public List<EncFSFileInfo> listFiles(String path) throws IOException {
 		try {
-			List<EncFSFileInfo> list = new ArrayList<EncFSFileInfo>();
+			List<EncFSFileInfo> list = new ArrayList<>();
 
-			Entry dirEnt = api.metadata(absPath(path), 0, null, true, null);
+			String absPath = absPath(path);
 
-			if (!dirEnt.isDir) {
+			if (!absPath.equals("/")) {
+				Metadata meta = mDbxClient.files().getMetadata(absPath(path));
+
 				IOException ioe = new IOException(path + " is not a directory");
-				Log.e(TAG, ioe.toString() + "\n" + Log.getStackTraceString(ioe));
-				throw ioe;
+				if (!(meta instanceof FolderMetadata)) {
+					Log.e(TAG, ioe.toString() + "\n" + Log.getStackTraceString(ioe));
+					throw ioe;
+				}
+			} else {
+				// Dropbox v2 API wants root folder expressed as ""
+				absPath = "";
 			}
 
-			// Add entries to list
-			for (Entry childEnt : dirEnt.contents) {
-				try {
-					list.add(entryToFileInfo(childEnt));
-				} catch (IllegalArgumentException iae) {
+			ListFolderResult res = null;
+			do {
+				if (res == null) {
+					res = mDbxClient.files().listFolder(absPath);
+				} else {
+					res = mDbxClient.files().listFolderContinue(res.getCursor());
+				}
+
+				List<Metadata> entries = res.getEntries();
+
+				for (Metadata entry : entries) {
+					try {
+						list.add(metaToFileInfo(entry));
+					} catch (IllegalArgumentException iae) {
 					/*
 					 * Can happen if the file name is illegal, for example
 					 * starting with '/'. In this case just skip adding the file
 					 * to the list.
 					 */
+					}
 				}
-			}
+			} while (res.getHasMore());
 
 			return list;
-		} catch (DropboxException e) {
-			handleDropboxException(e);
+		} catch (DbxException e) {
+			handleDbxException(e);
 			return null;
 		}
 	}
@@ -238,9 +287,9 @@ public class DropboxFileProvider implements EncFSFileProvider {
 	@Override
 	public boolean mkdir(String path) throws IOException {
 		try {
-			api.createFolder(absPath(path));
-		} catch (DropboxException e) {
-			handleDropboxException(e);
+			mDbxClient.files().createFolder(absPath(path));
+		} catch (DbxException e) {
+			handleDbxException(e);
 		}
 
 		return true;
@@ -257,9 +306,9 @@ public class DropboxFileProvider implements EncFSFileProvider {
 	@Override
 	public boolean move(String srcPath, String dstPath) throws IOException {
 		try {
-			api.move(absPath(srcPath), absPath(dstPath));
-		} catch (DropboxException e) {
-			handleDropboxException(e);
+			mDbxClient.files().move(absPath(srcPath), absPath(dstPath));
+		} catch (DbxException e) {
+			handleDbxException(e);
 		}
 
 		return true;
@@ -268,9 +317,9 @@ public class DropboxFileProvider implements EncFSFileProvider {
 	@Override
 	public InputStream openInputStream(String path) throws IOException {
 		try {
-			return api.getFileStream(absPath(path), null);
-		} catch (DropboxException e) {
-			handleDropboxException(e);
+			return mDbxClient.files().download(absPath(path)).getInputStream();
+		} catch (DbxException e) {
+			handleDbxException(e);
 			return null;
 		}
 	}
@@ -278,7 +327,7 @@ public class DropboxFileProvider implements EncFSFileProvider {
 	@Override
 	public OutputStream openOutputStream(String path, long length)
 			throws IOException {
-		return new DropboxOutputStream(api, absPath(path), length);
+		return new DropboxOutputStream(mDbxClient, absPath(path));
 	}
 
 	@Override

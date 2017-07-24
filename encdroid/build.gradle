@@ -34,8 +34,7 @@ android {
 
 dependencies {
     // Dropbox SDK
-    compile files('libs/dropbox-android-sdk-1.6.3.jar')
-    compile files('libs/json_simple-1.1.jar')
+    compile 'com.dropbox.core:dropbox-core-sdk:2.1.1'
 
     // EncFS Java
     compile files('libs/encfs-java-0.8.jar')
