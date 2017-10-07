@@ -660,8 +660,14 @@ public class FileChooserActivity extends ListActivity {
 				};
 
 				File[] list = path.listFiles(filter);
-				Arrays.sort(list);
-				return list == null ? new File[0] : list;
+
+				if (list != null) {
+					Arrays.sort(list);
+				} else {
+					list = new File[0];
+				}
+
+				return list;
 			} else {
 				return new File[0];
 			}
