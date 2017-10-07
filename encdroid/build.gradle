@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 24
+    compileSdkVersion 26
     buildToolsVersion "26.0.0"
 
     defaultConfig {
         applicationId "org.mrpdaemon.android.encdroid"
         minSdkVersion 14
-        targetSdkVersion 21
+        targetSdkVersion 23
 
         ndk {
             abiFilters 'armeabi', 'armeabi-v7a', 'x86', 'mips'
@@ -45,6 +45,6 @@ dependencies {
     compile 'com.google.apis:google-api-services-drive:v2-rev273-1.22.0'
     compile 'com.google.api-client:google-api-client-android:1.22.0'
     compile 'com.google.api-client:google-api-client-gson:1.22.0'
-    compile 'com.google.android.gms:play-services-auth:11.0.2'
-    compile 'com.google.android.gms:play-services-drive:11.0.2'
+    compile 'com.google.android.gms:play-services-auth:11.0.4'
+    compile 'com.google.android.gms:play-services-drive:11.0.4'
 }
