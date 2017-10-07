@@ -121,8 +121,8 @@ public class VolumeListActivity extends ListActivity implements
 	private EDApplication mApp;
 
 	// Currently selected VolumeList item
-	private Volume mSelectedVolume;
-	private int mSelectedVolIdx;
+	private Volume mSelectedVolume = null;
+	private int mSelectedVolIdx = -1;
 
 	// Result from the volume picker activity
 	private String mVolPickerResult = null;
@@ -181,7 +181,14 @@ public class VolumeListActivity extends ListActivity implements
 
 		if (savedInstanceState != null) {
 			// restore mSelectedVolume
-			mSelectedVolume = mAdapter.getItem(mSelectedVolIdx);
+			try {
+				if (mSelectedVolIdx >= 0) {
+					mSelectedVolume = mAdapter.getItem(mSelectedVolIdx);
+				}
+			} catch (IndexOutOfBoundsException ioobe) {
+				// ignore, it's possible the volume list size changed in the meanwhile
+				mSelectedVolIdx = -1;
+			}
 		}
 	}
 
