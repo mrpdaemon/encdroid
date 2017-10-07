@@ -37,6 +37,7 @@ import org.mrpdaemon.sec.encfs.EncFSFileInputStream;
 import org.mrpdaemon.sec.encfs.EncFSFileOutputStream;
 import org.mrpdaemon.sec.encfs.EncFSVolume;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -52,12 +53,15 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.DialogInterface.OnShowListener;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.FileObserver;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.text.Editable;
 import android.util.Log;
 import android.util.SparseBooleanArray;
@@ -119,6 +123,11 @@ public class VolumeBrowserActivity extends ListActivity implements
 	private final static int ASYNC_TASK_DELETE = 5;
 	private final static int ASYNC_TASK_CREATE_DIR = 6;
 	private final static int ASYNC_TASK_PASTE = 7;
+
+	// Permission request results
+	private final static int PERM_REQUEST_RESULT_DECRYPT = 0;
+	private final static int PERM_REQUEST_RESULT_EXPORT = 1;
+	private final static int PERM_REQUEST_RESULT_IMPORT = 2;
 
 	// Logger tag
 	private final static String TAG = "VolumeBrowserActivity";
@@ -204,6 +213,26 @@ public class VolumeBrowserActivity extends ListActivity implements
 
 	// Saved instance state for current EncFS directory
 	private String mSavedCurDirPath = null;
+
+	private void launchFileChooserForExport() {
+		Intent startFileExport = new Intent(
+				VolumeBrowserActivity.this,
+				FileChooserActivity.class);
+
+		Bundle exportFileParams = new Bundle();
+		exportFileParams.putInt(
+				FileChooserActivity.MODE_KEY,
+				FileChooserActivity.EXPORT_FILE_MODE);
+		exportFileParams.putString(
+				FileChooserActivity.EXPORT_FILE_KEY,
+				getSelectedFileString(
+						VolumeBrowserActivity.this,
+						mSelectedFileList));
+		startFileExport.putExtras(exportFileParams);
+
+		startActivityForResult(startFileExport,
+				EXPORT_FILE_REQUEST);
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -356,25 +385,18 @@ public class VolumeBrowserActivity extends ListActivity implements
 
 							return true;
 						case R.id.volume_browser_menu_export:
-							Intent startFileExport = new Intent(
-									VolumeBrowserActivity.this,
-									FileChooserActivity.class);
-
-							Bundle exportFileParams = new Bundle();
-							exportFileParams.putInt(
-									FileChooserActivity.MODE_KEY,
-									FileChooserActivity.EXPORT_FILE_MODE);
-							exportFileParams.putString(
-									FileChooserActivity.EXPORT_FILE_KEY,
-									getSelectedFileString(
-											VolumeBrowserActivity.this,
-											mSelectedFileList));
-							startFileExport.putExtras(exportFileParams);
-
 							mode.finish();
 
-							startActivityForResult(startFileExport,
-									EXPORT_FILE_REQUEST);
+							// Make sure we have WRITE permission on the external storage
+							if (ContextCompat.checkSelfPermission(VolumeBrowserActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+									!= PackageManager.PERMISSION_GRANTED) {
+								ActivityCompat.requestPermissions(VolumeBrowserActivity.this,
+										new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+										PERM_REQUEST_RESULT_EXPORT);
+							} else {
+								launchFileChooserForExport();
+							}
+
 							return true;
 						default:
 							return false;
@@ -557,20 +579,33 @@ public class VolumeBrowserActivity extends ListActivity implements
 		return super.onPrepareOptionsMenu(menu);
 	}
 
+	private void launchFileChooserForImport() {
+		Intent startFileChooser = new Intent(this,
+				FileChooserActivity.class);
+
+		Bundle fileChooserParams = new Bundle();
+		fileChooserParams.putInt(FileChooserActivity.MODE_KEY,
+				FileChooserActivity.FILE_PICKER_MODE);
+		startFileChooser.putExtras(fileChooserParams);
+
+		startActivityForResult(startFileChooser, PICK_FILE_REQUEST);
+	}
+
 	// Handler for options menu selections
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
 		case R.id.volume_browser_menu_import:
-			Intent startFileChooser = new Intent(this,
-					FileChooserActivity.class);
+			// Make sure we have WRITE permission on the external storage
+			if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+					!= PackageManager.PERMISSION_GRANTED) {
+				ActivityCompat.requestPermissions(this,
+						new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+						PERM_REQUEST_RESULT_IMPORT);
+			} else {
+				launchFileChooserForImport();
+			}
 
-			Bundle fileChooserParams = new Bundle();
-			fileChooserParams.putInt(FileChooserActivity.MODE_KEY,
-					FileChooserActivity.FILE_PICKER_MODE);
-			startFileChooser.putExtras(fileChooserParams);
-
-			startActivityForResult(startFileChooser, PICK_FILE_REQUEST);
 			return true;
 		case R.id.volume_browser_menu_mkdir:
 			showDialog(DIALOG_CREATE_FOLDER);
@@ -854,6 +889,23 @@ public class VolumeBrowserActivity extends ListActivity implements
 		return alertDialog;
 	}
 
+	private void launchNewDecryptTask() {
+		// Create sdcard dir if it doesn't exist
+		File encDroidDir = new File(
+				Environment.getExternalStorageDirectory(),
+				ENCDROID_SD_DIR_NAME);
+		if (!encDroidDir.exists()) {
+			encDroidDir.mkdir();
+		}
+
+		File dstFile = new File(encDroidDir, mOpenFileName);
+		// Launch async task to decrypt the file
+		TaskFragment decryptTask = new DecryptTaskFragment(this, mOpenFile,
+				dstFile);
+		addTaskFragment(decryptTask);
+		decryptTask.startTask();
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -889,23 +941,49 @@ public class VolumeBrowserActivity extends ListActivity implements
 				return;
 			}
 
-			// Create sdcard dir if it doesn't exist
-			File encDroidDir = new File(
-					Environment.getExternalStorageDirectory(),
-					ENCDROID_SD_DIR_NAME);
-			if (!encDroidDir.exists()) {
-				encDroidDir.mkdir();
-			}
-
 			mOpenFile = selected.getFile();
 			mOpenFileName = mOpenFile.getName();
-			File dstFile = new File(encDroidDir, mOpenFileName);
 
-			// Launch async task to decrypt the file
-			TaskFragment decryptTask = new DecryptTaskFragment(this, mOpenFile,
-					dstFile);
-			addTaskFragment(decryptTask);
-			decryptTask.startTask();
+			// Make sure we have WRITE permission on the external storage
+			if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+					!= PackageManager.PERMISSION_GRANTED) {
+				ActivityCompat.requestPermissions(this,
+						new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+						PERM_REQUEST_RESULT_DECRYPT);
+			} else {
+				launchNewDecryptTask();
+			}
+		}
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String[] permissions,
+											  int[] grantResults) {
+		switch (requestCode) {
+			case PERM_REQUEST_RESULT_DECRYPT:
+				if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+					launchNewDecryptTask();
+				} else {
+					Log.e(TAG, "Write external storage permission not granted for decryption");
+				}
+				break;
+			case PERM_REQUEST_RESULT_EXPORT:
+				if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+					launchFileChooserForExport();
+				} else {
+					Log.e(TAG, "Write external storage permission not granted for export");
+				}
+				break;
+			case PERM_REQUEST_RESULT_IMPORT:
+				if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+					launchFileChooserForImport();
+				} else {
+					Log.e(TAG, "Write external storage permission not granted for import");
+				}
+				break;
+			default:
+				Log.e(TAG, "Unknown permission request code: " + requestCode);
+				break;
 		}
 	}
 
