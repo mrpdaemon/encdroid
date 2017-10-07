@@ -1,3 +1,2 @@
 .externalNativeBuild
-src/main/jniLibs
 *.apk
