@@ -31,6 +31,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 
+import android.Manifest;
 import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
@@ -38,6 +39,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.content.pm.PackageManager;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -46,6 +50,7 @@ public class GoogleDriveAccount extends Account {
 	// Activity request codes
 	public static final int REQUEST_ACCOUNT_PICKER = 31;
 	public static final int REQUEST_AUTH_TOKEN = 32;
+	private static final int PERMISSIONS_REQUEST_GET_ACCOUNTS = 42;
 
 	// Preference keys
 	private final static String PREFS_KEY = "google_drive_prefs";
@@ -54,7 +59,7 @@ public class GoogleDriveAccount extends Account {
 
 	// Login toast type
 	private static enum LoginResult {
-		OK, FAILED, NO_PLAY_SERVICES
+		OK, FAILED, NO_PLAY_SERVICES, NO_PERMISSIONS
 	};
 
 	// Logger tag
@@ -84,8 +89,11 @@ public class GoogleDriveAccount extends Account {
 	// Drive API object
 	private Drive driveService = null;
 
+	private boolean permissionRequestInProgress;
+
 	// Create drive service
 	private void createDriveService(String accountName) {
+		android.accounts.Account[] accounts = credential.getGoogleAccountManager().getAccountManager().getAccounts();
 		credential.setSelectedAccountName(accountName);
 
 		driveService = new Drive.Builder(AndroidHttp.newCompatibleTransport(),
@@ -111,6 +119,9 @@ public class GoogleDriveAccount extends Account {
 						break;
 					case NO_PLAY_SERVICES:
 						stringId = R.string.google_drive_no_play_services;
+						break;
+					case NO_PERMISSIONS:
+						stringId = R.string.google_drive_no_permissions;
 						break;
 					default:
 						stringId = 0;
@@ -216,8 +227,20 @@ public class GoogleDriveAccount extends Account {
 		}
 
 		// Select account to link
-		if (linked == false) {
-			linkInProgress = true;
+		if (!linked) {
+			if (ContextCompat.checkSelfPermission(context, Manifest.permission.GET_ACCOUNTS) != PackageManager.PERMISSION_GRANTED) {
+				// Should we show an explanation?
+				if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.GET_ACCOUNTS)) {
+					showLoginToast(activity, LoginResult.NO_PERMISSIONS);
+					return;
+				} else {
+					// No explanation needed, we can request the permission.
+					permissionRequestInProgress = true;
+					ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.GET_ACCOUNTS}, PERMISSIONS_REQUEST_GET_ACCOUNTS);
+					return;
+				}
+			}
+            linkInProgress = true;
 			try {
 				activity.startActivityForResult(
 						credential.newChooseAccountIntent(),
@@ -235,7 +258,7 @@ public class GoogleDriveAccount extends Account {
 
 	@Override
 	public boolean isLinkOrAuthInProgress() {
-		return linkInProgress || authInProgress;
+		return linkInProgress || authInProgress || permissionRequestInProgress;
 	}
 
 	@Override
@@ -272,6 +295,11 @@ public class GoogleDriveAccount extends Account {
 	}
 
 	@Override
+	public boolean isPermissionRequestInProgress() {
+		return permissionRequestInProgress;
+	}
+
+	@Override
 	public boolean forwardActivityResult(Activity origin, int requestCode,
 			int resultCode, Intent data) {
 		switch (requestCode) {
@@ -298,7 +326,10 @@ public class GoogleDriveAccount extends Account {
 
 					return true;
 				}
-			}
+			} else {
+                // Clear linkInProgress AFTER startAuthThread() sets authInProgress
+                linkInProgress = false;
+            }
 			break;
 		case REQUEST_AUTH_TOKEN:
 			if (resultCode == Activity.RESULT_OK) {
@@ -311,5 +342,23 @@ public class GoogleDriveAccount extends Account {
 		}
 
 		return false;
+	}
+
+	@Override
+	public void forwardPermissionRequestResults(Activity origin, int requestCode, String[] permissions, int[] grantResults) {
+		if (requestCode == PERMISSIONS_REQUEST_GET_ACCOUNTS) {
+			permissionRequestInProgress = false;
+			for (int i = 0; i < permissions.length; i++) {
+				String permission = permissions[i];
+				int grantResult = grantResults[i];
+				if (permission.equals(Manifest.permission.GET_ACCOUNTS)) {
+					if (grantResult == PackageManager.PERMISSION_GRANTED) {
+						startLinkOrAuth(origin);
+					} else {
+						showLoginToast(origin, LoginResult.NO_PERMISSIONS);
+					}
+				}
+			}
+		}
 	}
 }
