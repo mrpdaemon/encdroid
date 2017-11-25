@@ -46,6 +46,7 @@ import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
@@ -707,6 +708,33 @@ public class VolumeListActivity extends ListActivity implements
 		} else {
 			Log.e(TAG, "File chooser returned unexpected return code: "
 					+ resultCode);
+			// Assume it's from one of the account login activies
+			for (Account account : mApp.getAccountList()) {
+				if (account.isLinkOrAuthInProgress()) {
+					if (account.forwardActivityResult(
+							VolumeListActivity.this, requestCode,
+							resultCode, data) == false) {
+						mErrDialogText = String.format(
+								getString(R.string.account_login_error),
+								account.getName());
+						showDialog(DIALOG_ERROR);
+					}
+				}
+			}
+		}
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+		// Assume it's from one of the account login activies
+		for (Account account : mApp.getAccountList()) {
+			if (account.isPermissionRequestInProgress()) {
+				account.forwardPermissionRequestResults(
+						VolumeListActivity.this, requestCode,
+						permissions, grantResults);
+			}
 		}
 	}
 

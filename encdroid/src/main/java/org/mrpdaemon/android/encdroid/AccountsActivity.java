@@ -28,6 +28,7 @@ import android.app.ListFragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MenuItem;
@@ -206,6 +207,30 @@ public class AccountsActivity extends Activity {
 					}
 				}
 			}
+		}
+
+		@Override
+		public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+			super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+			for (Account account : mApp.getAccountList()) {
+				if (account.isPermissionRequestInProgress()) {
+					account.forwardPermissionRequestResults(getActivity(), requestCode, permissions, grantResults);
+				}
+			}
+		}
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+		EDAccountsFragment mAccountsFragment = (EDAccountsFragment) getFragmentManager()
+				.findFragmentByTag(FRAGMENT_TAG);
+		try {
+			mAccountsFragment.onRequestPermissionsResult(requestCode, permissions, grantResults);
+		} catch (Exception e) {
+			Log.e(LOG_TAG, e.getMessage());
 		}
 	}
 }

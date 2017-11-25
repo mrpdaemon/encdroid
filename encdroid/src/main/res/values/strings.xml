@@ -107,6 +107,7 @@
     <string name="google_drive_login">Logged in to Google Drive</string>
     <string name="google_drive_login_failed">Failed to log in to Google Drive</string>
 	<string name="google_drive_no_play_services">Google Play Services not available on device</string>
+    <string name="google_drive_no_permissions">Encdroid needs GET_ACCOUNTS (Contacts) permission to access to your Google account</string>
 	<string name="multi_select_num_selected">%d selected</string>
 	<string name="multi_select_plural_files">%d files</string>
 	<string name="dropbox_api_upgrade">Dropbox integration requires re-linking to v2 API</string>

@@ -71,6 +71,10 @@ public abstract class Account {
 	// Return an EncFSFileProvider for this account at the given path
 	public abstract EncFSFileProvider getFileProvider(String path);
 
+	public boolean isPermissionRequestInProgress() {
+		return false;
+	}
+
 	/*
 	 * Common code to link or authenticate the account if needed.
 	 * 
@@ -106,5 +110,8 @@ public abstract class Account {
 		}
 
 		return isAuthenticated();
+	}
+
+	public void forwardPermissionRequestResults(Activity origin, int requestCode, String[] permissions, int[] grantResults) {
 	}
 }
